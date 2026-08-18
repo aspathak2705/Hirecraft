@@ -21,6 +21,15 @@ import {
 } from 'lucide-react';
 import { supabase } from './supabase';
 
+// Import local assets so Vite processes them during build
+import heroDoodle from '../assets/Business and Finance, Data and Analytics, Technology, Vector illustration.jpg';
+import strategyDoodle from '../assets/download (4).jpg';
+import resumeDoodle from '../assets/How To Revise a Story_ The 10-Draft Process _ The Writer.jpg';
+import linkedinDoodle from '../assets/download (5).jpg';
+import interviewDoodle from '../assets/download (6).jpg';
+import founderPhoto from '../assets/Taiwanese Startup Founder.jpg';
+import techDoodle from '../assets/Tech and Innovation, Data and Analytics, Business and Finance, Vector illustration.jpg';
+
 // Core Audit Questions
 const AUDIT_QUESTIONS = [
   {
@@ -370,7 +379,7 @@ export default function App() {
                   
                   <div style={{ width: '100%', height: '200px', overflow: 'hidden', borderTop: 'var(--border-light)' }}>
                     <img 
-                      src="/assets/Business and Finance, Data and Analytics, Technology, Vector illustration.jpg" 
+                      src={heroDoodle} 
                       alt="Tech and business doodle illustration" 
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                     />
@@ -396,7 +405,7 @@ export default function App() {
                     <p className="service-desc" style={{ marginBottom: '16px' }}>Identify your core market value and map it against what companies pay a premium for.</p>
                   </div>
                   <div style={{ height: '180px', overflow: 'hidden', borderTop: 'var(--border-light)', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
-                    <img src="/assets/download (4).jpg" alt="Career Strategy Doodle" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    <img src={strategyDoodle} alt="Career Strategy Doodle" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                   </div>
                 </div>
 
@@ -407,7 +416,7 @@ export default function App() {
                     <p className="service-desc" style={{ marginBottom: '16px' }}>Integrate structural keywords and exact matching criteria so your CV bypasses digital gatekeepers.</p>
                   </div>
                   <div style={{ height: '180px', overflow: 'hidden', borderTop: 'var(--border-light)', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
-                    <img src="/assets/How To Revise a Story_ The 10-Draft Process _ The Writer.jpg" alt="Resume Optimization Doodle" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    <img src={resumeDoodle} alt="Resume Optimization Doodle" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                   </div>
                 </div>
 
@@ -418,7 +427,7 @@ export default function App() {
                     <p className="service-desc" style={{ marginBottom: '16px' }}>Reposition your LinkedIn profile to function as an active funnel for inbound opportunities.</p>
                   </div>
                   <div style={{ height: '180px', overflow: 'hidden', borderTop: 'var(--border-light)', backgroundColor: '#FFFFFF' }}>
-                    <img src="/assets/download (5).jpg" alt="LinkedIn Optimization Doodle" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }} />
+                    <img src={linkedinDoodle} alt="LinkedIn Optimization Doodle" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }} />
                   </div>
                 </div>
 
@@ -429,7 +438,7 @@ export default function App() {
                     <p className="service-desc" style={{ marginBottom: '16px' }}>Learn recruiter psychology models to answer complex situational queries with confidence.</p>
                   </div>
                   <div style={{ height: '180px', overflow: 'hidden', borderTop: 'var(--border-light)', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
-                    <img src="/assets/download (6).jpg" alt="Interview Prep Doodle" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    <img src={interviewDoodle} alt="Interview Prep Doodle" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                   </div>
                 </div>
               </div>
@@ -564,7 +573,7 @@ export default function App() {
                 <div style={{ backgroundColor: 'var(--bg-secondary)', border: 'var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '0px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
                   <div style={{ width: '100%', height: '220px', overflow: 'hidden' }}>
                     <img 
-                      src="/assets/Taiwanese Startup Founder.jpg" 
+                      src={founderPhoto} 
                       alt="Professional Career Strategy Founder" 
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
