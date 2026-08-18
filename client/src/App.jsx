@@ -358,23 +358,22 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Right Card: Whisper light-themed highlight layout */}
-                <div className="preview-card" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                  <div className="badge">Outcomes Over Features</div>
-                  <h3 className="preview-card-title">Crafting profiles for executive roles</h3>
-                  <p className="preview-card-desc">
-                    Shift from listing tasks to demonstrating business outcomes. Showcase scale, leadership, and transformation metrics.
-                  </p>
-
-                  <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-                    <div style={{ flex: 1, backgroundColor: 'var(--bg-tertiary)', padding: '16px', borderRadius: 'var(--radius-md)', border: 'var(--border-light)' }}>
-                      <h4 style={{ color: 'var(--color-gold)', fontSize: '24px', fontWeight: 800 }}>88%</h4>
-                      <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Average increase in inbound recruiter requests</p>
-                    </div>
-                    <div style={{ flex: 1, backgroundColor: 'var(--bg-tertiary)', padding: '16px', borderRadius: 'var(--radius-md)', border: 'var(--border-light)' }}>
-                      <h4 style={{ color: 'var(--color-gold)', fontSize: '24px', fontWeight: 800 }}>3.4x</h4>
-                      <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Faster interview response turnaround rates</p>
-                    </div>
+                {/* Right Card: Whisper light-themed highlight layout with generated Pinterest asset */}
+                <div className="preview-card" style={{ backgroundColor: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '0px', overflow: 'hidden' }}>
+                  <div style={{ padding: '30px' }}>
+                    <div className="badge">Outcomes Over Features</div>
+                    <h3 className="preview-card-title" style={{ fontSize: '24px', marginBottom: '8px' }}>Crafting profiles for executive roles</h3>
+                    <p className="preview-card-desc" style={{ marginBottom: '0px' }}>
+                      Shift from listing tasks to demonstrating business outcomes. Showcase scale and leadership.
+                    </p>
+                  </div>
+                  
+                  <div style={{ width: '100%', height: '200px', overflow: 'hidden', borderTop: 'var(--border-light)' }}>
+                    <img 
+                      src="/professional_branding.jpg" 
+                      alt="Professional Branding Workplace Layout" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                    />
                   </div>
                 </div>
               </div>
@@ -546,14 +545,23 @@ export default function App() {
                   </div>
                 </div>
 
-                <div style={{ backgroundColor: 'var(--bg-secondary)', border: 'var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '40px' }}>
-                  <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '20px' }}>Brand Personality Values</h3>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                    {['Strategic', 'Professional', 'Insightful', 'Approach-focused', 'Modern', 'Trustworthy'].map((v, i) => (
-                      <span key={i} style={{ padding: '8px 16px', backgroundColor: 'var(--bg-primary)', border: 'var(--border-light)', borderRadius: '50px', fontSize: '13px' }}>
-                        {v}
-                      </span>
-                    ))}
+                <div style={{ backgroundColor: 'var(--bg-secondary)', border: 'var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '0px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+                  <div style={{ width: '100%', height: '220px', overflow: 'hidden' }}>
+                    <img 
+                      src="/professional_branding.jpg" 
+                      alt="HireCraft Strategy Table Setup" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                  <div style={{ padding: '30px' }}>
+                    <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '20px' }}>Brand Personality Values</h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                      {['Strategic', 'Professional', 'Insightful', 'Approach-focused', 'Modern', 'Trustworthy'].map((v, i) => (
+                        <span key={i} style={{ padding: '8px 16px', backgroundColor: 'var(--bg-primary)', border: 'var(--border-light)', borderRadius: '50px', fontSize: '13px' }}>
+                          {v}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
