@@ -82,9 +82,15 @@ export default function App() {
   const [adminToken, setAdminToken] = useState('');
   const [adminViewActive, setAdminViewActive] = useState(false);
 
+  // Admin authentication token state
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+  const [authTokenInput, setAuthTokenInput] = useState('');
+  const [authError, setAuthError] = useState('');
+
   // Smooth scroll
   const scrollTo = (id) => {
     setActiveTab(id);
+    setAdminViewActive(false); // Switch out of admin view if user clicks nav link
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -177,6 +183,18 @@ export default function App() {
     }
   };
 
+  // Unlocking dashboard
+  const handleAuthSubmit = (e) => {
+    e.preventDefault();
+    if (authTokenInput === 'admin123') { // Simple hidden entry token
+      setIsAdminUnlocked(true);
+      setAuthError('');
+      loadAdminDashboard();
+    } else {
+      setAuthError('Invalid Access Key.');
+    }
+  };
+
   // Load Admin Data
   const loadAdminDashboard = async () => {
     try {
@@ -198,12 +216,23 @@ export default function App() {
     }
   };
 
+  // Toggle admin auth flow via footer secret trigger
+  const triggerAdminFlow = () => {
+    if (adminViewActive || isAdminUnlocked) {
+      setAdminViewActive(false);
+      setIsAdminUnlocked(false);
+    } else {
+      // Toggle the access key dialog
+      setAdminViewActive(true);
+    }
+  };
+
   return (
     <div>
       {/* Navigation Header */}
       <header className="header">
         <div className="container header-inner">
-          <a href="#" className="logo" onClick={(e) => { e.preventDefault(); window.scrollTo({top: 0, behavior: 'smooth'}); }}>
+          <a href="#" className="logo" onClick={(e) => { e.preventDefault(); setAdminViewActive(false); window.scrollTo({top: 0, behavior: 'smooth'}); }}>
             <span className="logo-icon">✦</span>
             <span className="logo-text">Hire<span>Craft</span></span>
           </a>
@@ -215,54 +244,66 @@ export default function App() {
             <button className="btn-primary" onClick={() => scrollTo('booking')}>
               Book Consultation <ChevronRight size={16} />
             </button>
-            <button 
-              className="theme-btn" 
-              title="Admin Dashboard"
-              onClick={() => {
-                if (adminViewActive) setAdminViewActive(false);
-                else loadAdminDashboard();
-              }}
-            >
-              <Users size={18} />
-            </button>
           </nav>
         </div>
       </header>
 
-      {/* Admin Panel Overlay */}
+      {/* Admin Panel / Auth Overlay */}
       {adminViewActive && (
         <div className="container" style={{ paddingTop: '120px', paddingBottom: '40px' }}>
-          <div className="audit-card" style={{ maxWidth: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 className="section-title">Admin Lead Dashboard</h2>
-              <button className="btn-secondary" onClick={() => setAdminViewActive(false)}>Close Admin View</button>
+          {!isAdminUnlocked ? (
+            <div className="audit-card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '16px' }}>🔑 Enter Access Key</h3>
+              <form onSubmit={handleAuthSubmit}>
+                <div className="form-group" style={{ marginBottom: '16px' }}>
+                  <input 
+                    type="password" 
+                    className="form-control" 
+                    placeholder="Access Key" 
+                    value={authTokenInput}
+                    onChange={(e) => setAuthTokenInput(e.target.value)}
+                  />
+                  {authError && <span style={{ color: '#f87171', fontSize: '12px' }}>{authError}</span>}
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="submit" className="btn-primary">Unlock</button>
+                  <button type="button" className="btn-secondary" onClick={() => setAdminViewActive(false)}>Cancel</button>
+                </div>
+              </form>
             </div>
-            <p className="section-desc" style={{ textAlign: 'left', marginBottom: '24px' }}>Real-time consultation booking submissions captured through the HireCraft landing page.</p>
-            <div style={{ overflowX: 'auto' }}>
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Target Role</th>
-                    <th>Message</th>
-                    <th>Submitted At</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leads.map((lead) => (
-                    <tr key={lead.id}>
-                      <td><strong>{lead.name}</strong></td>
-                      <td>{lead.email}</td>
-                      <td>{lead.target_role}</td>
-                      <td>{lead.message || <span style={{color: 'var(--text-muted)'}}>No notes</span>}</td>
-                      <td>{new Date(lead.created_at).toLocaleString()}</td>
+          ) : (
+            <div className="audit-card" style={{ maxWidth: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 className="section-title">Admin Lead Dashboard</h2>
+                <button className="btn-secondary" onClick={() => { setAdminViewActive(false); setIsAdminUnlocked(false); }}>Close Admin View</button>
+              </div>
+              <p className="section-desc" style={{ textAlign: 'left', marginBottom: '24px' }}>Real-time consultation booking submissions captured through the HireCraft landing page.</p>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Target Role</th>
+                      <th>Message</th>
+                      <th>Submitted At</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {leads.map((lead) => (
+                      <tr key={lead.id}>
+                        <td><strong>{lead.name}</strong></td>
+                        <td>{lead.email}</td>
+                        <td>{lead.target_role}</td>
+                        <td>{lead.message || <span style={{color: 'var(--text-muted)'}}>No notes</span>}</td>
+                        <td>{new Date(lead.created_at).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -629,7 +670,9 @@ export default function App() {
             </div>
           </div>
           <div className="footer-bottom">
-            <span>© {new Date().getFullYear()} HireCraft. All rights reserved.</span>
+            <span style={{ cursor: 'default' }} onDoubleClick={triggerAdminFlow}>
+              © {new Date().getFullYear()} HireCraft. All rights reserved.
+            </span>
             <span>Don't Just Apply. Position Yourself.</span>
           </div>
         </div>
