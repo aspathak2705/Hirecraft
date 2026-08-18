@@ -395,8 +395,8 @@ export default function App() {
                     <h3 className="service-title">Career Positioning Strategy</h3>
                     <p className="service-desc" style={{ marginBottom: '16px' }}>Identify your core market value and map it against what companies pay a premium for.</p>
                   </div>
-                  <div style={{ height: '140px', overflow: 'hidden', borderTop: 'var(--border-light)' }}>
-                    <img src="/assets/download (4).jpg" alt="Career Strategy Doodle" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ height: '180px', overflow: 'hidden', borderTop: 'var(--border-light)', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
+                    <img src="/assets/download (4).jpg" alt="Career Strategy Doodle" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                   </div>
                 </div>
 
@@ -406,8 +406,8 @@ export default function App() {
                     <h3 className="service-title">ATS Resume Optimization</h3>
                     <p className="service-desc" style={{ marginBottom: '16px' }}>Integrate structural keywords and exact matching criteria so your CV bypasses digital gatekeepers.</p>
                   </div>
-                  <div style={{ height: '140px', overflow: 'hidden', borderTop: 'var(--border-light)' }}>
-                    <img src="/assets/How To Revise a Story_ The 10-Draft Process _ The Writer.jpg" alt="Resume Optimization Doodle" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ height: '180px', overflow: 'hidden', borderTop: 'var(--border-light)', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
+                    <img src="/assets/How To Revise a Story_ The 10-Draft Process _ The Writer.jpg" alt="Resume Optimization Doodle" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                   </div>
                 </div>
 
@@ -417,8 +417,8 @@ export default function App() {
                     <h3 className="service-title">LinkedIn Transformation</h3>
                     <p className="service-desc" style={{ marginBottom: '16px' }}>Reposition your LinkedIn profile to function as an active funnel for inbound opportunities.</p>
                   </div>
-                  <div style={{ height: '140px', overflow: 'hidden', borderTop: 'var(--border-light)' }}>
-                    <img src="/assets/download (5).jpg" alt="LinkedIn Optimization Doodle" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ height: '180px', overflow: 'hidden', borderTop: 'var(--border-light)', backgroundColor: '#FFFFFF' }}>
+                    <img src="/assets/download (5).jpg" alt="LinkedIn Optimization Doodle" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 20%' }} />
                   </div>
                 </div>
 
@@ -428,8 +428,8 @@ export default function App() {
                     <h3 className="service-title">Executive Presence & Interview Prep</h3>
                     <p className="service-desc" style={{ marginBottom: '16px' }}>Learn recruiter psychology models to answer complex situational queries with confidence.</p>
                   </div>
-                  <div style={{ height: '140px', overflow: 'hidden', borderTop: 'var(--border-light)' }}>
-                    <img src="/assets/download (6).jpg" alt="Interview Prep Doodle" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <div style={{ height: '180px', overflow: 'hidden', borderTop: 'var(--border-light)', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
+                    <img src="/assets/download (6).jpg" alt="Interview Prep Doodle" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                   </div>
                 </div>
               </div>
