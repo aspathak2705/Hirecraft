@@ -86,8 +86,8 @@ button {
   right: 0;
   z-index: 100;
   backdrop-filter: blur(12px);
-  background-color: rgba(10, 18, 36, 0.8);
-  border-bottom: var(--border-light);
+  background-color: rgba(248, 250, 252, 0.85); /* Matches --bg-primary with high opacity */
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
   transition: var(--transition);
 }
 
@@ -106,6 +106,7 @@ button {
   align-items: center;
   gap: 8px;
   letter-spacing: -0.5px;
+  color: var(--text-primary);
 }
 
 .logo-icon {
@@ -125,7 +126,7 @@ button {
 
 .nav-link {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
   transition: var(--transition);
   position: relative;
@@ -283,11 +284,6 @@ button {
   box-shadow: var(--shadow-premium);
 }
 
-.preview-card-dark {
-  background-color: #050B14;
-  border-color: rgba(245, 158, 11, 0.1);
-}
-
 .preview-card-title {
   font-size: 32px;
   font-weight: 700;
@@ -301,6 +297,30 @@ button {
   margin-bottom: 30px;
   max-width: 400px;
 }
+
+.preview-card-dark {
+  background-color: #0B1329;
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.preview-card-dark .preview-card-title {
+  color: #FFFFFF !important;
+}
+
+.preview-card-dark .preview-card-desc {
+  color: #E2E8F0 !important;
+}
+
+.preview-card-dark .mock-chat-bubble {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.preview-card-dark .mock-meta {
+  color: #F59E0B !important;
+}
+
 
 /* Mock chat notification components (Whisper style UI) */
 .mock-chat-list {
@@ -597,11 +617,11 @@ button {
 
 /* Footer Section */
 .footer {
-  background-color: #050B14;
-  border-top: var(--border-light);
+  background-color: #0F172A; /* Slate-900 background to secure strong contrast */
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
   padding: 60px 0 30px;
   font-size: 14px;
-  color: var(--text-secondary);
+  color: #94A3B8; /* explicit light slate gray */
 }
 
 .footer-grid {
@@ -614,7 +634,7 @@ button {
 .footer-brand-title {
   font-weight: 800;
   font-size: 20px;
-  color: var(--text-primary);
+  color: #F8FAFC; /* explicit light white title */
   margin-bottom: 12px;
 }
 
@@ -625,7 +645,7 @@ button {
 
 .footer-title {
   font-weight: 700;
-  color: var(--text-primary);
+  color: #F8FAFC; /* explicit light contrast title */
   margin-bottom: 16px;
 }
 
@@ -634,6 +654,11 @@ button {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.footer-link {
+  color: #94A3B8;
+  transition: var(--transition);
 }
 
 .footer-link:hover {

@@ -370,8 +370,8 @@ export default function App() {
                   
                   <div style={{ width: '100%', height: '200px', overflow: 'hidden', borderTop: 'var(--border-light)' }}>
                     <img 
-                      src="/professional_branding.jpg" 
-                      alt="Professional Branding Workplace Layout" 
+                      src="/assets/Business and Finance, Data and Analytics, Technology, Vector illustration.jpg" 
+                      alt="Tech and business doodle illustration" 
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                     />
                   </div>
@@ -389,32 +389,48 @@ export default function App() {
               </div>
 
               <div className="services-grid">
-                <div className="service-card">
-                  <div className="service-icon"><Compass /></div>
-                  <h3 className="service-title">Career Positioning Strategy</h3>
-                  <p className="service-desc">Identify your core market value and map it against what companies pay a premium for.</p>
-                  <div className="service-card-glow"></div>
+                <div className="service-card" style={{ padding: '0px', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div style={{ padding: '32px 32px 0px 32px' }}>
+                    <div className="service-icon"><Compass /></div>
+                    <h3 className="service-title">Career Positioning Strategy</h3>
+                    <p className="service-desc" style={{ marginBottom: '16px' }}>Identify your core market value and map it against what companies pay a premium for.</p>
+                  </div>
+                  <div style={{ height: '140px', overflow: 'hidden', borderTop: 'var(--border-light)' }}>
+                    <img src="/assets/download (4).jpg" alt="Career Strategy Doodle" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
                 </div>
 
-                <div className="service-card">
-                  <div className="service-icon"><FileText /></div>
-                  <h3 className="service-title">ATS Resume Optimization</h3>
-                  <p className="service-desc">Integrate structural keywords and exact matching criteria so your CV bypasses digital gatekeepers.</p>
-                  <div className="service-card-glow"></div>
+                <div className="service-card" style={{ padding: '0px', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div style={{ padding: '32px 32px 0px 32px' }}>
+                    <div className="service-icon"><FileText /></div>
+                    <h3 className="service-title">ATS Resume Optimization</h3>
+                    <p className="service-desc" style={{ marginBottom: '16px' }}>Integrate structural keywords and exact matching criteria so your CV bypasses digital gatekeepers.</p>
+                  </div>
+                  <div style={{ height: '140px', overflow: 'hidden', borderTop: 'var(--border-light)' }}>
+                    <img src="/assets/How To Revise a Story_ The 10-Draft Process _ The Writer.jpg" alt="Resume Optimization Doodle" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
                 </div>
 
-                <div className="service-card">
-                  <div className="service-icon"><UserCheck /></div>
-                  <h3 className="service-title">LinkedIn Transformation</h3>
-                  <p className="service-desc">Reposition your LinkedIn profile to function as an active funnel for inbound opportunities.</p>
-                  <div className="service-card-glow"></div>
+                <div className="service-card" style={{ padding: '0px', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div style={{ padding: '32px 32px 0px 32px' }}>
+                    <div className="service-icon"><UserCheck /></div>
+                    <h3 className="service-title">LinkedIn Transformation</h3>
+                    <p className="service-desc" style={{ marginBottom: '16px' }}>Reposition your LinkedIn profile to function as an active funnel for inbound opportunities.</p>
+                  </div>
+                  <div style={{ height: '140px', overflow: 'hidden', borderTop: 'var(--border-light)' }}>
+                    <img src="/assets/download (5).jpg" alt="LinkedIn Optimization Doodle" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
                 </div>
 
-                <div className="service-card">
-                  <div className="service-icon"><Award /></div>
-                  <h3 className="service-title">Executive Presence & Interview Prep</h3>
-                  <p className="service-desc">Learn recruiter psychology models to answer complex situational queries with confidence.</p>
-                  <div className="service-card-glow"></div>
+                <div className="service-card" style={{ padding: '0px', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div style={{ padding: '32px 32px 0px 32px' }}>
+                    <div className="service-icon"><Award /></div>
+                    <h3 className="service-title">Executive Presence & Interview Prep</h3>
+                    <p className="service-desc" style={{ marginBottom: '16px' }}>Learn recruiter psychology models to answer complex situational queries with confidence.</p>
+                  </div>
+                  <div style={{ height: '140px', overflow: 'hidden', borderTop: 'var(--border-light)' }}>
+                    <img src="/assets/download (6).jpg" alt="Interview Prep Doodle" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -548,8 +564,8 @@ export default function App() {
                 <div style={{ backgroundColor: 'var(--bg-secondary)', border: 'var(--border-light)', borderRadius: 'var(--radius-lg)', padding: '0px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
                   <div style={{ width: '100%', height: '220px', overflow: 'hidden' }}>
                     <img 
-                      src="/professional_branding.jpg" 
-                      alt="HireCraft Strategy Table Setup" 
+                      src="/assets/Taiwanese Startup Founder.jpg" 
+                      alt="Professional Career Strategy Founder" 
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
