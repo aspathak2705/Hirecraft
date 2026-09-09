@@ -122,11 +122,50 @@ CREATE TABLE IF NOT EXISTS job_opportunities (
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 6. Create admin_roles table (Explicit Admin Role Mapping for RLS)
+CREATE TABLE IF NOT EXISTS admin_roles (
+  user_id uuid PRIMARY KEY,
+  role text DEFAULT 'admin' NOT NULL,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 7. Create career_intelligence table (Versioned Grounded LLM Career Positioning Intelligence)
+CREATE TABLE IF NOT EXISTS career_intelligence (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  diagnostic_session_id uuid REFERENCES diagnostic_sessions(id) ON DELETE CASCADE,
+  model text DEFAULT 'nvidia/nemotron-3-super-120b-a12b:free' NOT NULL,
+  provider text DEFAULT 'openrouter' NOT NULL,
+  analysis_version text DEFAULT 'v1.0' NOT NULL,
+  analysis_status text DEFAULT 'completed' NOT NULL, -- 'queued', 'processing', 'completed', 'failed'
+  
+  -- Structured Intelligence Output
+  positioning_summary text,
+  current_professional_signal text,
+  target_role_interpretation text,
+  career_narrative text,
+  primary_positioning_opportunity text,
+  
+  -- Grounded Arrays / Objects
+  strengths jsonb DEFAULT '[]'::jsonb,
+  differentiators jsonb DEFAULT '[]'::jsonb,
+  evidence_gaps jsonb DEFAULT '[]'::jsonb,
+  positioning_risks jsonb DEFAULT '[]'::jsonb,
+  recruiter_perception jsonb DEFAULT '{}'::jsonb,
+  opportunity_alignment jsonb DEFAULT '{}'::jsonb,
+  recommendations jsonb DEFAULT '[]'::jsonb,
+  achievement_investigation_questions jsonb DEFAULT '[]'::jsonb,
+  career_dna jsonb DEFAULT '{}'::jsonb,
+  
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_documents_session ON documents(diagnostic_session_id);
 CREATE INDEX IF NOT EXISTS idx_sections_document ON document_sections(document_id);
 CREATE INDEX IF NOT EXISTS idx_evidence_session ON evidence_items(diagnostic_session_id);
 CREATE INDEX IF NOT EXISTS idx_evidence_document ON evidence_items(document_id);
+CREATE INDEX IF NOT EXISTS idx_career_intelligence_session ON career_intelligence(diagnostic_session_id);
 
 -- Enable RLS on all tables
 ALTER TABLE diagnostic_sessions ENABLE ROW LEVEL SECURITY;
@@ -134,6 +173,8 @@ ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document_sections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE evidence_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_opportunities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE career_intelligence ENABLE ROW LEVEL SECURITY;
 
 -- Security Policies (RLS)
 -- 1. Public (anon) users can submit (INSERT) their diagnostic session & related telemetry
@@ -142,17 +183,20 @@ CREATE POLICY "Public insert documents" ON documents FOR INSERT TO public WITH C
 CREATE POLICY "Public insert document_sections" ON document_sections FOR INSERT TO public WITH CHECK (true);
 CREATE POLICY "Public insert evidence_items" ON evidence_items FOR INSERT TO public WITH CHECK (true);
 CREATE POLICY "Public insert job_opportunities" ON job_opportunities FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "Public insert career_intelligence" ON career_intelligence FOR INSERT TO public WITH CHECK (true);
 
--- 2. Prevent anonymous public mass read/update of internal notes, status, and sensitive documents
--- Only authenticated admin roles can view & update full diagnostic session records and internal notes
+-- 2. Restrict SELECT/UPDATE of sensitive diagnostic, document, evidence, and AI intelligence tables to authenticated users/admins
 CREATE POLICY "Authenticated admin select diagnostic_sessions" ON diagnostic_sessions FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated admin update status and notes" ON diagnostic_sessions FOR UPDATE TO authenticated USING (true);
 
--- 3. Restrict document, section, evidence, and JD access strictly to authenticated admin users
 CREATE POLICY "Authenticated admin select documents" ON documents FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated admin select document_sections" ON document_sections FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated admin select evidence_items" ON evidence_items FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated admin select job_opportunities" ON job_opportunities FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Public select career_intelligence" ON career_intelligence FOR SELECT TO public USING (true);
+CREATE POLICY "Authenticated admin select career_intelligence" ON career_intelligence FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admin select admin_roles" ON admin_roles FOR SELECT TO authenticated USING (true);
 
 -- Private Storage Bucket Initialization Note:
 -- Bucket name: 'hirecraft_docs'

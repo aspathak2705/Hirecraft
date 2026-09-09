@@ -166,6 +166,14 @@ export default function DiagnosticContainer({ onCancel }) {
       });
     }
 
+    // 5. Trigger Phase 3 Career Intelligence Generation
+    try {
+      const { fetchCareerIntelligence } = await import('../../services/careerIntelligenceService');
+      await fetchCareerIntelligence(sId);
+    } catch (e) {
+      console.warn('Career Intelligence async trigger note:', e.message);
+    }
+
     setIsProcessing(false);
     trackEvent('report_viewed', { score: analysis.scores });
   };

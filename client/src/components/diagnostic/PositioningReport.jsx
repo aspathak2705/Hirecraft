@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { Lock, ArrowRight, CheckCircle, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Lock, ArrowRight, CheckCircle, ShieldAlert, Sparkles, UserCheck, HelpCircle, FileText, Target, AlertCircle } from 'lucide-react';
 import { updateSessionConsultation } from '../../services/supabaseService';
+import { fetchCareerIntelligence } from '../../services/careerIntelligenceService';
 import { trackEvent } from '../../utils/analytics';
 
 export default function PositioningReport({ reportData, formData, sessionId, onReset }) {
   const { scores, currentSignal, positioningSummary, primaryOpportunity, investigationAreas } = reportData;
+
+  const [intelligence, setIntelligence] = useState(null);
+  const [loadingIntelligence, setLoadingIntelligence] = useState(true);
 
   const [consultationRequested, setConsultationRequested] = useState(false);
   const [preferredContact, setPreferredContact] = useState('Email');
@@ -12,6 +16,20 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
   const [bestTime, setBestTime] = useState('Evening');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    async function loadIntelligence() {
+      if (sessionId) {
+        setLoadingIntelligence(true);
+        const data = await fetchCareerIntelligence(sessionId);
+        if (data) setIntelligence(data);
+        setLoadingIntelligence(false);
+      } else {
+        setLoadingIntelligence(false);
+      }
+    }
+    loadIntelligence();
+  }, [sessionId]);
 
   const handleConsultationSubmit = async (e) => {
     e.preventDefault();
@@ -34,12 +52,17 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
     setConsultationRequested(true);
   };
 
+  const dna = intelligence?.career_dna || {};
+  const recruiterPerception = intelligence?.recruiter_perception || {};
+  const opportunityAlignment = intelligence?.opportunity_alignment || {};
+  const questions = intelligence?.achievement_investigation_questions || [];
+
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto' }}>
       {/* Header Banner */}
       <div style={{ textAlign: 'center', marginBottom: '40px' }}>
         <div className="badge" style={{ marginBottom: '12px' }}>
-          Diagnostic Complete
+          Phase 3 Grounded Intelligence Active
         </div>
         <h2 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '10px' }}>
           Your Career Positioning Snapshot
@@ -49,7 +72,7 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
         </p>
       </div>
 
-      {/* 1. CURRENT SIGNAL & SUMMARY */}
+      {/* 1. CAREER POSITIONING SUMMARY & RECRUITER REALITY MIRROR */}
       <div 
         style={{ 
           backgroundColor: 'var(--bg-secondary)', 
@@ -60,23 +83,61 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
           boxShadow: 'var(--shadow-premium)'
         }}
       >
-        <div style={{ fontSize: '12px', color: 'var(--color-gold)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>
-          Current Recruiter Signal
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--color-gold)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
+            Current Professional Signal (Recruiter Reality Mirror)
+          </div>
+          {intelligence?.model && (
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', backgroundColor: 'var(--bg-primary)', padding: '4px 8px', borderRadius: '4px', border: 'var(--border-light)' }}>
+              Analysis v1.0 • {intelligence.model}
+            </span>
+          )}
         </div>
+
         <h3 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '16px' }}>
-          "{currentSignal}"
+          "{intelligence?.current_professional_signal || currentSignal}"
         </h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '15px', lineHeight: '1.7' }}>
-          {positioningSummary}
+        <p style={{ color: 'var(--text-secondary)', fontSize: '15px', lineHeight: '1.7', marginBottom: '16px' }}>
+          {intelligence?.positioning_summary || positioningSummary}
         </p>
-        <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginTop: '14px', fontStyle: 'italic' }}>
-          * Based on the information and materials provided during your assessment.
+
+        {/* Narrative */}
+        {intelligence?.career_narrative && (
+          <div style={{ backgroundColor: 'var(--bg-primary)', padding: '16px', borderRadius: 'var(--radius-sm)', border: 'var(--border-light)', marginBottom: '14px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-gold)', marginBottom: '4px' }}>Grounded Career Narrative</div>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, fontStyle: 'italic' }}>
+              "{intelligence.career_narrative}"
+            </p>
+          </div>
+        )}
+
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', fontStyle: 'italic' }}>
+          * Based strictly on evidence found in your provided documents and submitted context.
         </span>
       </div>
 
-      {/* 2. 4 POSITIONING DIMENSIONS */}
+      {/* 2. CAREER DNA FOUNDATION */}
+      {dna?.professional_identity && (
+        <div style={{ backgroundColor: 'var(--bg-secondary)', border: 'var(--border-light)', borderRadius: 'var(--radius-md)', padding: '24px', marginBottom: '32px' }}>
+          <h4 style={{ fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <Sparkles size={18} style={{ color: 'var(--color-gold)' }} /> Career DNA Foundation
+          </h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+            <div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Professional Identity</div>
+              <div style={{ fontSize: '14px', fontWeight: 700 }}>{dna.professional_identity}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Primary Specialization</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-gold)' }}>{dna.primary_positioning}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. DETERMINISTIC SCORES BREAKDOWN */}
       <h4 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>
-        Positioning Performance Breakdown
+        Authoritative Positioning Performance Breakdown
       </h4>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '40px' }}>
         
@@ -114,24 +175,73 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
 
       </div>
 
-      {/* 3. BIGGEST POSITIONING OPPORTUNITY */}
-      <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.06)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: 'var(--radius-md)', padding: '24px', marginBottom: '40px' }}>
+      {/* 4. PRIMARY OPPORTUNITY & GROUNDED STRENGTHS */}
+      <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.06)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: 'var(--radius-md)', padding: '24px', marginBottom: '32px' }}>
         <h4 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-gold)', marginBottom: '8px' }}>
           💡 Primary Positioning Opportunity Identified:
         </h4>
         <p style={{ fontSize: '15px', color: 'var(--text-primary)', margin: 0 }}>
-          {primaryOpportunity}
+          {intelligence?.primary_positioning_opportunity || primaryOpportunity}
         </p>
       </div>
 
-      {/* 4. WHAT WE WOULD INVESTIGATE FURTHER (3 LOCKED HOOKS) */}
-      <h4 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>
-        What We Would Investigate Further
-      </h4>
-      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
-        Your diagnostic identified key areas where deeper positioning analysis can unlock higher conversion:
-      </p>
+      {/* 5. OPPORTUNITY ALIGNMENT & UNVERIFIED REQUIREMENTS */}
+      {opportunityAlignment?.unverified_requirements?.length > 0 && (
+        <div style={{ backgroundColor: 'var(--bg-secondary)', border: 'var(--border-light)', borderRadius: 'var(--radius-md)', padding: '24px', marginBottom: '32px' }}>
+          <h4 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Target size={18} style={{ color: 'var(--color-gold)' }} /> Target Opportunity Alignment Analysis
+          </h4>
+          
+          {opportunityAlignment.strong_matches?.length > 0 && (
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#10B981', marginBottom: '6px' }}>Explicit Evidence Matches:</div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {opportunityAlignment.strong_matches.map((item, i) => (
+                  <span key={i} style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: 600 }}>
+                    ✓ {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>Unverified Requirements (Not found in provided documents):</div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {opportunityAlignment.unverified_requirements.map((item, i) => (
+                <span key={i} style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)', color: '#ef4444', padding: '4px 10px', borderRadius: '4px', fontSize: '12px' }}>
+                  • {item} (Not established in provided evidence)
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. ACHIEVEMENT MINING (HIDDEN ACHIEVEMENT QUESTIONS) */}
+      {questions.length > 0 && (
+        <div style={{ backgroundColor: 'var(--bg-secondary)', border: 'var(--border-light)', borderRadius: 'var(--radius-md)', padding: '24px', marginBottom: '40px' }}>
+          <h4 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <HelpCircle size={18} style={{ color: 'var(--color-gold)' }} /> Hidden Achievement Discovery (Achievement Mining)
+          </h4>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+            We identified weakly expressed contributions that represent unquantified value. Probing questions:
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {questions.map((q, idx) => (
+              <div key={idx} style={{ backgroundColor: 'var(--bg-primary)', padding: '14px', borderRadius: 'var(--radius-sm)', border: 'var(--border-light)' }}>
+                <strong style={{ fontSize: '13px', color: 'var(--color-gold)', display: 'block', marginBottom: '4px' }}>Area: {q.area}</strong>
+                <p style={{ fontSize: '13px', margin: 0, color: 'var(--text-primary)' }}>"{q.question}"</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 7. WHAT WE WOULD INVESTIGATE FURTHER */}
+      <h4 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>
+        Strategic Investigation Areas
+      </h4>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '48px' }}>
         {investigationAreas.map((area, idx) => (
           <div key={idx} style={{ backgroundColor: 'var(--bg-secondary)', border: 'var(--border-light)', borderRadius: 'var(--radius-md)', padding: '20px', position: 'relative' }}>
@@ -145,7 +255,7 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
         ))}
       </div>
 
-      {/* 5. THE PREMIUM CONVERSION MOMENT */}
+      {/* 8. THE PREMIUM CONVERSION MOMENT */}
       <div 
         style={{ 
           backgroundColor: 'var(--bg-secondary)', 

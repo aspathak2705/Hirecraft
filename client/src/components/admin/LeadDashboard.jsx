@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, ExternalLink, Mail, Phone, Calendar, Clock, AlertCircle, FileText, CheckCircle } from 'lucide-react';
+import { Eye, ExternalLink, Mail, Phone, Calendar, Clock, AlertCircle, FileText, CheckCircle, Sparkles } from 'lucide-react';
 import { updateLeadStatus, getSignedDocumentUrl } from '../../services/supabaseService';
+import { fetchCareerIntelligence } from '../../services/careerIntelligenceService';
 
 export default function LeadDashboard({ leads = [], onRefresh, onClose }) {
   const [selectedLead, setSelectedLead] = useState(null);
@@ -9,6 +10,7 @@ export default function LeadDashboard({ leads = [], onRefresh, onClose }) {
   const [statusInput, setStatusInput] = useState('');
   const [signedResumeUrl, setSignedResumeUrl] = useState(null);
   const [loadingSignedUrl, setLoadingSignedUrl] = useState(false);
+  const [leadIntelligence, setLeadIntelligence] = useState(null);
 
   const filteredLeads = leads.filter(lead => {
     if (statusFilter === 'All') return true;
@@ -20,7 +22,9 @@ export default function LeadDashboard({ leads = [], onRefresh, onClose }) {
     setNotesInput(lead.internal_notes || '');
     setStatusInput(lead.status || 'New');
     setSignedResumeUrl(null);
+    setLeadIntelligence(null);
 
+    // Fetch signed URL if path exists
     const storagePath = lead.resume_storage_path || (lead.resume_url?.startsWith('diagnostic/') ? lead.resume_url : null);
     if (storagePath) {
       setLoadingSignedUrl(true);
@@ -30,6 +34,10 @@ export default function LeadDashboard({ leads = [], onRefresh, onClose }) {
     } else if (lead.resume_url && (lead.resume_url.startsWith('http') || lead.resume_url.startsWith('blob:'))) {
       setSignedResumeUrl(lead.resume_url);
     }
+
+    // Fetch AI Career Intelligence for lead
+    const intel = await fetchCareerIntelligence(lead.id);
+    if (intel) setLeadIntelligence(intel);
   };
 
   const handleSaveLeadStatus = async () => {
@@ -200,6 +208,30 @@ export default function LeadDashboard({ leads = [], onRefresh, onClose }) {
                 {selectedLead.primary_opportunity || selectedLead.message || 'No specifics logged.'}
               </p>
             </div>
+
+            {/* AI Career Intelligence Summary */}
+            {leadIntelligence && (
+              <div style={{ backgroundColor: 'var(--bg-secondary)', border: 'var(--border-light)', borderRadius: 'var(--radius-sm)', padding: '14px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Sparkles size={14} /> Career Positioning Intelligence
+                  </span>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                    {leadIntelligence.analysis_version} • {leadIntelligence.model}
+                  </span>
+                </div>
+                {leadIntelligence.career_narrative && (
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 8px 0', fontStyle: 'italic' }}>
+                    "{leadIntelligence.career_narrative}"
+                  </p>
+                )}
+                {leadIntelligence.strengths?.length > 0 && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    <strong>Key Strengths:</strong> {leadIntelligence.strengths.slice(0, 3).join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Context Answers */}
             {selectedLead.achievement_context && (
