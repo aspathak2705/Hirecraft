@@ -20,6 +20,9 @@ import {
   Award
 } from 'lucide-react';
 import { supabase } from './supabase';
+import { fetchDiagnosticSessions } from './services/supabaseService';
+import DiagnosticContainer from './components/diagnostic/DiagnosticContainer';
+import LeadDashboard from './components/admin/LeadDashboard';
 
 // Import local assets so Vite processes them during build
 import heroDoodle from '../assets/Business and Finance, Data and Analytics, Technology, Vector illustration.jpg';
@@ -30,65 +33,12 @@ import interviewDoodle from '../assets/download (6).jpg';
 import founderPhoto from '../assets/Taiwanese Startup Founder.jpg';
 import techDoodle from '../assets/Tech and Innovation, Data and Analytics, Business and Finance, Vector illustration.jpg';
 
-// Core Audit Questions
-const AUDIT_QUESTIONS = [
-  {
-    id: 1,
-    question: "How does your current resume describe your accomplishments?",
-    options: [
-      { text: "Mostly lists daily duties and responsibilities (e.g., 'Responsible for managing tasks')", score: 30, feedback: "Duties tell, metrics sell. Recruiter psychology prioritizes measurable business outcomes." },
-      { text: "Mentions achievements but lacks clear numbers or scale", score: 60, feedback: "Better. Adding percentages, dollar amounts, or scale makes accomplishments concrete." },
-      { text: "Strictly value-focused with clear metrics and business outcomes", score: 95, feedback: "Excellent! You are communicating business impact clearly." }
-    ]
-  },
-  {
-    id: 2,
-    question: "What is your primary method of reaching out to target companies?",
-    options: [
-      { text: "Submitting to job boards/ATS systems without personal follow-up", score: 25, feedback: "ATS platforms are crowded. 70-80% of jobs are filled through strategic positioning and networking." },
-      { text: "Reaching out to internal recruiters directly via LinkedIn messaging", score: 65, feedback: "Good proactive approach. Make sure your profile acts as a landing page for recruiters." },
-      { text: "Warm introductions via existing connections & strategic networking", score: 90, feedback: "High conversion method. Warm leads drastically reduce application-to-interview dropoff." }
-    ]
-  },
-  {
-    id: 3,
-    question: "How optimized is your LinkedIn profile for inbound headhunters?",
-    options: [
-      { text: "Barebones/copy-pasted resume without strategic keywords or a custom headline", score: 20, feedback: "Headhunters search using exact skills. Lack of optimization makes you invisible to algorithms." },
-      { text: "Up-to-date work history, but profile lacks a distinct personal brand story", score: 55, feedback: "Visible, but easily forgotten. A compelling story builds authority and commands premium salary." },
-      { text: "Fully branded with targeted keywords, engaging about section, and strategic hooks", score: 95, feedback: "Top tier positioning. You are optimized to attract inbound opportunities." }
-    ]
-  },
-  {
-    id: 4,
-    question: "When asked 'Why should we hire you?', how do you position yourself?",
-    options: [
-      { text: "Recite my qualifications, education, and job history chronologically", score: 35, feedback: "Avoid chronological laundry lists. Focus instead on solving the employer's current problems." },
-      { text: "Explain my passion for the role and summarize my key technical skills", score: 65, feedback: "Good, but competitive candidates also have skills. You need a unique value proposition." },
-      { text: "Present a clear value statement addressing their key business problems and how I fix them", score: 95, feedback: "Perfect. You position yourself as a strategic solution, not just another candidate." }
-    ]
-  }
-];
-
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
-  const [auditStep, setAuditStep] = useState(0);
-  const [auditAnswers, setAuditAnswers] = useState({});
-  const [auditSubmitted, setAuditSubmitted] = useState(false);
-  const [auditScore, setAuditScore] = useState(0);
-  const [auditFeedback, setAuditFeedback] = useState([]);
-  
-  // Booking Form State
-  const [bookingName, setBookingName] = useState('');
-  const [bookingEmail, setBookingEmail] = useState('');
-  const [bookingRole, setBookingRole] = useState('');
-  const [bookingMessage, setBookingMessage] = useState('');
-  const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [bookingError, setBookingError] = useState('');
+  const [diagnosticMode, setDiagnosticMode] = useState(false);
   
   // Admin Data State
   const [leads, setLeads] = useState([]);
-  const [adminToken, setAdminToken] = useState('');
   const [adminViewActive, setAdminViewActive] = useState(false);
 
   // Admin authentication token state
@@ -106,93 +56,7 @@ export default function App() {
     }
   };
 
-  // Audit interaction
-  const handleSelectOption = (questionId, optionIndex) => {
-    const selectedOption = AUDIT_QUESTIONS.find(q => q.id === questionId).options[optionIndex];
-    setAuditAnswers(prev => ({
-      ...prev,
-      [questionId]: selectedOption
-    }));
-  };
-
-  const handleNextStep = () => {
-    if (auditStep < AUDIT_QUESTIONS.length - 1) {
-      setAuditStep(auditStep + 1);
-    } else {
-      // Calculate overall score
-      const scores = Object.values(auditAnswers).map(a => a.score);
-      const average = Math.round(scores.reduce((a, b) => a + b, 0) / AUDIT_QUESTIONS.length);
-      const feedbacks = Object.values(auditAnswers).map(a => a.feedback);
-      
-      setAuditScore(average);
-      setAuditFeedback(feedbacks);
-      setAuditSubmitted(true);
-      
-      // Attempt db log
-      logAuditToSupabase(average);
-    }
-  };
-
-  const logAuditToSupabase = async (score) => {
-    try {
-      const { error } = await supabase
-        .from('audits')
-        .insert([{ 
-          score, 
-          answers: JSON.stringify(auditAnswers), 
-          created_at: new Date().toISOString() 
-        }]);
-      if (error) console.error("Database save failed: ", error.message);
-    } catch (e) {
-      console.warn("Offline fallback activated: ", e);
-    }
-  };
-
-  const resetAudit = () => {
-    setAuditStep(0);
-    setAuditAnswers({});
-    setAuditSubmitted(false);
-    setAuditScore(0);
-    setAuditFeedback([]);
-  };
-
-  // Booking Form Submission
-  const handleBookingSubmit = async (e) => {
-    e.preventDefault();
-    setBookingError('');
-    setBookingSuccess(false);
-
-    if (!bookingName || !bookingEmail || !bookingRole) {
-      setBookingError('Please fill out all required fields.');
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('bookings')
-        .insert([{
-          name: bookingName,
-          email: bookingEmail,
-          target_role: bookingRole,
-          message: bookingMessage,
-          created_at: new Date().toISOString()
-        }]);
-
-      if (error) throw error;
-
-      setBookingSuccess(true);
-      setBookingName('');
-      setBookingEmail('');
-      setBookingRole('');
-      setBookingMessage('');
-    } catch (err) {
-      console.warn("Supabase database interaction failed: ", err.message);
-      // Fallback message to user: successful mock capture
-      setBookingSuccess(true);
-    }
-  };
-
-  // Unlocking dashboard
+  // Unlocking admin dashboard
   const handleAuthSubmit = (e) => {
     e.preventDefault();
     if (authTokenInput === 'admin123') { // Simple hidden entry token
@@ -206,23 +70,36 @@ export default function App() {
 
   // Load Admin Data
   const loadAdminDashboard = async () => {
-    try {
-      const { data: bookingsData, error: errBookings } = await supabase
-        .from('bookings')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (errBookings) throw errBookings;
-      setLeads(bookingsData || []);
-      setAdminViewActive(true);
-    } catch (e) {
-      console.warn("Could not retrieve admin logs: ", e.message);
+    const data = await fetchDiagnosticSessions();
+    if (data) {
+      setLeads(data);
+    } else {
+      // Fallback sample telemetry data
       setLeads([
-        { id: 1, name: "Arjun Mehta", email: "arjun@example.com", target_role: "Engineering Director", message: "Needs ATS Optimization", created_at: "2026-08-18T10:00:00Z" },
-        { id: 2, name: "Priya Sharma", email: "priya@example.com", target_role: "Senior Product Manager", message: "Wants resume & LinkedIn revamp", created_at: "2026-08-18T12:30:00Z" }
+        { 
+          id: '1', 
+          name: "Arjun Mehta", 
+          email: "arjun@example.com", 
+          phone: "+91 9876543210",
+          career_stage: "Growing Professional (3-7 yrs)",
+          opportunity_type: "Job Switch",
+          target_role: "Senior Backend Engineer", 
+          opportunity_timeline: "Within 1 Month",
+          current_signal: "Emerging Specialist",
+          career_direction_score: 75,
+          impact_evidence_score: 60,
+          opportunity_alignment_score: 80,
+          differentiation_score: 65,
+          primary_opportunity: "Experience appears task-driven rather than outcome-focused.",
+          lead_segment: "Growing Professional",
+          urgency: "High",
+          diagnostic_complexity: "Moderate",
+          status: "New",
+          created_at: new Date().toISOString() 
+        }
       ]);
-      setAdminViewActive(true);
     }
+    setAdminViewActive(true);
   };
 
   // Toggle admin auth flow via footer secret trigger
@@ -231,7 +108,6 @@ export default function App() {
       setAdminViewActive(false);
       setIsAdminUnlocked(false);
     } else {
-      // Toggle the access key dialog
       setAdminViewActive(true);
     }
   };
@@ -281,37 +157,11 @@ export default function App() {
               </form>
             </div>
           ) : (
-            <div className="audit-card" style={{ maxWidth: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 className="section-title">Admin Lead Dashboard</h2>
-                <button className="btn-secondary" onClick={() => { setAdminViewActive(false); setIsAdminUnlocked(false); }}>Close Admin View</button>
-              </div>
-              <p className="section-desc" style={{ textAlign: 'left', marginBottom: '24px' }}>Real-time consultation booking submissions captured through the HireCraft landing page.</p>
-              <div style={{ overflowX: 'auto' }}>
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Target Role</th>
-                      <th>Message</th>
-                      <th>Submitted At</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leads.map((lead) => (
-                      <tr key={lead.id}>
-                        <td><strong>{lead.name}</strong></td>
-                        <td>{lead.email}</td>
-                        <td>{lead.target_role}</td>
-                        <td>{lead.message || <span style={{color: 'var(--text-muted)'}}>No notes</span>}</td>
-                        <td>{new Date(lead.created_at).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <LeadDashboard 
+              leads={leads} 
+              onRefresh={loadAdminDashboard} 
+              onClose={() => { setAdminViewActive(false); setIsAdminUnlocked(false); }} 
+            />
           )}
         </div>
       )}
@@ -445,101 +295,15 @@ export default function App() {
             </div>
           </section>
 
-          {/* Interactive Career Audit Tool */}
+          {/* Interactive Career Audit & Diagnostic Section */}
           <section id="audit" className="audit-section">
             <div className="container">
               <div className="section-header">
-                <h2 className="section-title">Evaluate Your Positioning Score</h2>
-                <p className="section-desc">Assess how recruiters view your professional brand layout in under 2 minutes.</p>
+                <h2 className="section-title">Career Positioning Diagnostic</h2>
+                <p className="section-desc">Assess how recruiters view your professional brand narrative in under 3 minutes.</p>
               </div>
 
-              <div className="audit-card">
-                {!auditSubmitted ? (
-                  <>
-                    <div className="audit-progress-container">
-                      <div className="audit-progress-bar">
-                        <div 
-                          className="audit-progress-fill" 
-                          style={{ width: `${((auditStep + 1) / AUDIT_QUESTIONS.length) * 100}%` }}
-                        ></div>
-                      </div>
-                      <span>Step {auditStep + 1} of {AUDIT_QUESTIONS.length}</span>
-                    </div>
-
-                    <h3 className="audit-question-title" style={{ marginTop: '24px' }}>
-                      {AUDIT_QUESTIONS[auditStep].question}
-                    </h3>
-
-                    <div className="audit-options">
-                      {AUDIT_QUESTIONS[auditStep].options.map((opt, idx) => {
-                        const isSelected = auditAnswers[AUDIT_QUESTIONS[auditStep].id]?.text === opt.text;
-                        return (
-                          <button 
-                            key={idx}
-                            className={`audit-option ${isSelected ? 'selected' : ''}`}
-                            onClick={() => handleSelectOption(AUDIT_QUESTIONS[auditStep].id, idx)}
-                          >
-                            <div className="audit-radio-circle"></div>
-                            {opt.text}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <button 
-                        className="btn-primary" 
-                        disabled={!auditAnswers[AUDIT_QUESTIONS[auditStep].id]}
-                        style={{ opacity: auditAnswers[AUDIT_QUESTIONS[auditStep].id] ? 1 : 0.5 }}
-                        onClick={handleNextStep}
-                      >
-                        {auditStep === AUDIT_QUESTIONS.length - 1 ? 'Get My Score' : 'Next Question'} <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div>
-                    <h3 className="section-title" style={{ fontSize: '28px', marginBottom: '24px' }}>Your Career Positioning Report</h3>
-                    <div className="audit-result-grid" style={{ marginBottom: '32px' }}>
-                      <div className="audit-result-score-circle">
-                        <span className="audit-result-score-num">{auditScore}%</span>
-                        <span className="audit-result-score-label">Brand Strength</span>
-                      </div>
-                      
-                      <div style={{ display: 'flex', flex: 8, flexDirection: 'column', gap: '16px', justifyContent: 'center' }}>
-                        <h4 style={{ fontWeight: 700, fontSize: '18px' }}>
-                          {auditScore < 40 && "⚠️ High Risk of Career Stagnation"}
-                          {auditScore >= 40 && auditScore < 75 && "⚡ Moderate Visibility. Room to Improve."}
-                          {auditScore >= 75 && "🏆 Solid Positioning Strategy!"}
-                        </h4>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                          {auditScore < 40 && "Your profiles may be acting as simple chronological logs rather than strategic marketing assets. You are highly vulnerable to being auto-filtered by modern recruiters."}
-                          {auditScore >= 40 && auditScore < 75 && "You have clear visibility but your message lacks strong hooks or scale parameters to secure premium interview calls consistently."}
-                          {auditScore >= 75 && "Excellent foundation. Your positioning showcases strong outcome alignment. Optimize minor metrics to scale further."}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '24px', borderRadius: 'var(--radius-md)', border: 'var(--border-light)', marginBottom: '30px' }}>
-                      <h5 style={{ fontWeight: 700, marginBottom: '12px' }}>Key Strategic Actions Required:</h5>
-                      <ul style={{ paddingLeft: '20px', fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {auditFeedback.map((fb, idx) => (
-                          <li key={idx}>{fb}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      <button className="btn-primary" onClick={() => scrollTo('booking')}>
-                        Fix My Positioning Now
-                      </button>
-                      <button className="btn-secondary" onClick={resetAudit}>
-                        Retake Evaluator
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <DiagnosticContainer />
             </div>
           </section>
 
