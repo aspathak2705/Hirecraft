@@ -1,22 +1,35 @@
-import React, { useState } from 'react';
-import { Eye, ExternalLink, Mail, Phone, Calendar, Clock, AlertCircle } from 'lucide-react';
-import { updateLeadStatus } from '../../services/supabaseService';
+import React, { useState, useEffect } from 'react';
+import { Eye, ExternalLink, Mail, Phone, Calendar, Clock, AlertCircle, FileText, CheckCircle } from 'lucide-react';
+import { updateLeadStatus, getSignedDocumentUrl } from '../../services/supabaseService';
 
 export default function LeadDashboard({ leads = [], onRefresh, onClose }) {
   const [selectedLead, setSelectedLead] = useState(null);
   const [statusFilter, setStatusFilter] = useState('All');
   const [notesInput, setNotesInput] = useState('');
   const [statusInput, setStatusInput] = useState('');
+  const [signedResumeUrl, setSignedResumeUrl] = useState(null);
+  const [loadingSignedUrl, setLoadingSignedUrl] = useState(false);
 
   const filteredLeads = leads.filter(lead => {
     if (statusFilter === 'All') return true;
     return lead.status === statusFilter;
   });
 
-  const handleOpenLead = (lead) => {
+  const handleOpenLead = async (lead) => {
     setSelectedLead(lead);
     setNotesInput(lead.internal_notes || '');
     setStatusInput(lead.status || 'New');
+    setSignedResumeUrl(null);
+
+    const storagePath = lead.resume_storage_path || (lead.resume_url?.startsWith('diagnostic/') ? lead.resume_url : null);
+    if (storagePath) {
+      setLoadingSignedUrl(true);
+      const url = await getSignedDocumentUrl(storagePath);
+      setSignedResumeUrl(url);
+      setLoadingSignedUrl(false);
+    } else if (lead.resume_url && (lead.resume_url.startsWith('http') || lead.resume_url.startsWith('blob:'))) {
+      setSignedResumeUrl(lead.resume_url);
+    }
   };
 
   const handleSaveLeadStatus = async () => {
@@ -196,13 +209,20 @@ export default function LeadDashboard({ leads = [], onRefresh, onClose }) {
               </div>
             )}
 
-            {/* Artifact links */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-              {selectedLead.resume_url && (
-                <a href={selectedLead.resume_url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <ExternalLink size={12} /> View Resume
+            {/* Artifact links & Storage info */}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
+              {loadingSignedUrl ? (
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Generating secure link...</span>
+              ) : signedResumeUrl ? (
+                <a href={signedResumeUrl} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                  <ExternalLink size={12} /> View Secure Resume (Signed URL)
                 </a>
-              )}
+              ) : (selectedLead.resume_url || selectedLead.resume_storage_path) ? (
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <FileText size={12} /> Private Resume Stored ({selectedLead.resume_storage_path || selectedLead.resume_url})
+                </span>
+              ) : null}
+
               {selectedLead.linkedin_url && (
                 <a href={selectedLead.linkedin_url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: '#3B82F6', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <ExternalLink size={12} /> LinkedIn

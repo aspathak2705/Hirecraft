@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import { uploadDocument } from '../../services/supabaseService';
+import { extractDocumentText } from '../../services/documentParser';
 import { FileText, Upload, Trash2 } from 'lucide-react';
 
 export default function TargetOpportunity({ formData, updateFormData, onNext, onBack }) {
@@ -12,8 +12,15 @@ export default function TargetOpportunity({ formData, updateFormData, onNext, on
 
     setIsUploading(true);
     try {
-      const fileUrl = await uploadDocument(file, 'job_descriptions');
-      updateFormData({ jd_file: file, jd_url: fileUrl, jd_name: file.name });
+      const uploadRes = await uploadDocument(file, 'session_temp', 'jd');
+      const extraction = await extractDocumentText(file);
+
+      updateFormData({ 
+        jd_file: file, 
+        jd_storage_path: uploadRes?.storage_path, 
+        jd_name: file.name,
+        jd_text: extraction.normalizedText || formData.jd_text
+      });
     } catch (err) {
       console.warn('JD upload failed:', err);
     } finally {

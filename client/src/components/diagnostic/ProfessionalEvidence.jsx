@@ -27,8 +27,20 @@ export default function ProfessionalEvidence({ formData, updateFormData, onNext,
     setIsUploading(true);
 
     try {
-      const fileUrl = await uploadDocument(file, 'resumes');
-      updateFormData({ resume_file: file, resume_url: fileUrl, resume_name: file.name });
+      // 1. Private Storage Upload
+      const uploadRes = await uploadDocument(file, 'session_temp', 'resume');
+      
+      // 2. Extract Document Text
+      const extraction = await extractDocumentText(file);
+      
+      updateFormData({ 
+        resume_file: file, 
+        resume_storage_path: uploadRes?.storage_path, 
+        resume_file_name: file.name,
+        resume_file_size: file.size,
+        resume_file_type: file.type,
+        resume_extraction: extraction
+      });
     } catch (err) {
       setUploadError('Upload failed. You can still continue without uploading.');
     } finally {
@@ -37,7 +49,14 @@ export default function ProfessionalEvidence({ formData, updateFormData, onNext,
   };
 
   const removeFile = () => {
-    updateFormData({ resume_file: null, resume_url: null, resume_name: null });
+    updateFormData({ 
+      resume_file: null, 
+      resume_storage_path: null, 
+      resume_file_name: null,
+      resume_file_size: null,
+      resume_file_type: null,
+      resume_extraction: null
+    });
   };
 
   return (
@@ -59,7 +78,7 @@ export default function ProfessionalEvidence({ formData, updateFormData, onNext,
           transition: 'var(--transition)'
         }}
       >
-        {!formData.resume_name ? (
+        {!(formData.resume_file_name || formData.resume_name) ? (
           <div>
             <Upload size={36} style={{ color: 'var(--color-gold)', marginBottom: '12px' }} />
             <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '6px' }}>
@@ -70,7 +89,7 @@ export default function ProfessionalEvidence({ formData, updateFormData, onNext,
             </p>
 
             <label className="btn-secondary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-              {isUploading ? 'Uploading & Indexing...' : 'Browse Document'}
+              {isUploading ? 'Uploading & Extracting Evidence...' : 'Browse Document'}
               <input 
                 type="file" 
                 accept=".pdf,.doc,.docx" 
@@ -85,8 +104,10 @@ export default function ProfessionalEvidence({ formData, updateFormData, onNext,
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <FileText size={24} style={{ color: 'var(--color-gold)' }} />
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontWeight: 600, fontSize: '14px' }}>{formData.resume_name}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Document indexed securely</div>
+                <div style={{ fontWeight: 600, fontSize: '14px' }}>{formData.resume_file_name || formData.resume_name}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  {formData.resume_extraction?.status === 'processed' ? '✓ Evidence extracted successfully' : 'Document uploaded securely'}
+                </div>
               </div>
             </div>
             <button 

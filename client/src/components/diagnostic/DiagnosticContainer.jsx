@@ -7,8 +7,13 @@ import TargetOpportunity from './TargetOpportunity';
 import CareerContext from './CareerContext';
 import ProcessingScreen from './ProcessingScreen';
 import PositioningReport from './PositioningReport';
-import { runDiagnosticAnalysis } from '../../services/diagnosticEngine';
-import { saveDiagnosticSession } from '../../services/supabaseService';
+import { 
+  saveDiagnosticSession, 
+  saveDocumentRecord, 
+  saveDocumentSections, 
+  saveEvidenceItems, 
+  saveJobOpportunity 
+} from '../../services/supabaseService';
 import { trackEvent } from '../../utils/analytics';
 
 const STEP_LABELS = [
@@ -69,10 +74,11 @@ export default function DiagnosticContainer({ onCancel }) {
   };
 
   const handleProcessingComplete = async () => {
+    // 1. Run deterministic diagnostic analysis
     const analysis = runDiagnosticAnalysis(formData);
     setReportData(analysis);
 
-    // Save session to Supabase
+    // 2. Prepare payload with private storage paths
     const payload = {
       name: formData.name,
       email: formData.email,
@@ -84,8 +90,12 @@ export default function DiagnosticContainer({ onCancel }) {
       linkedin_url: formData.linkedin_url || null,
       portfolio_url: formData.portfolio_url || null,
       github_url: formData.github_url || null,
-      resume_url: formData.resume_url || null,
-      jd_url: formData.jd_url || null,
+      resume_storage_path: formData.resume_storage_path || null,
+      resume_file_name: formData.resume_file_name || formData.resume_name || null,
+      resume_file_size: formData.resume_file_size || null,
+      resume_file_type: formData.resume_file_type || null,
+      jd_storage_path: formData.jd_storage_path || null,
+      jd_file_name: formData.jd_name || null,
       jd_text: formData.jd_text || null,
       achievement_context: formData.achievement_context || null,
       problem_solving_context: formData.problem_solving_context || null,
@@ -105,8 +115,55 @@ export default function DiagnosticContainer({ onCancel }) {
     };
 
     const saved = await saveDiagnosticSession(payload);
-    if (saved && saved.id) {
-      setSessionId(saved.id);
+    const sId = saved?.id || `session_${Date.now()}`;
+    setSessionId(sId);
+
+    // 3. Phase 2 Document & Evidence Ingestion to Supabase tables
+    if (formData.resume_extraction?.normalizedText) {
+      const docRecord = await saveDocumentRecord({
+        diagnostic_session_id: sId,
+        document_type: 'resume',
+        file_name: formData.resume_file_name || 'resume.pdf',
+        mime_type: formData.resume_file_type || 'application/pdf',
+        file_size: formData.resume_file_size || 0,
+        storage_path: formData.resume_storage_path || `diagnostic/${sId}/resume/resume.pdf`,
+        processing_status: formData.resume_extraction.status,
+        raw_extracted_text: formData.resume_extraction.rawText,
+        normalized_text: formData.resume_extraction.normalizedText,
+        extracted_text_length: formData.resume_extraction.length
+      });
+
+      const docId = docRecord?.id || null;
+
+      // Extract sections and evidence items
+      const { extractEvidenceFromDocument } = await import('../../services/evidenceService');
+      const { sections, evidenceItems } = extractEvidenceFromDocument(
+        formData.resume_extraction.normalizedText,
+        docId,
+        sId
+      );
+
+      if (docId && sections.length) {
+        await saveDocumentSections(sections.map(s => ({ ...s, document_id: docId })));
+      }
+
+      if (evidenceItems.length) {
+        await saveEvidenceItems(evidenceItems.map(e => ({ ...e, diagnostic_session_id: sId, document_id: docId })));
+      }
+    }
+
+    // 4. Save Job Opportunity if JD text exists
+    if (formData.jd_text) {
+      const { parseJobDescription } = await import('../../services/jdParser');
+      const parsedJD = parseJobDescription(formData.jd_text);
+      await saveJobOpportunity({
+        diagnostic_session_id: sId,
+        job_title: formData.target_role,
+        jd_text: formData.jd_text,
+        jd_storage_path: formData.jd_storage_path || null,
+        required_skills: parsedJD.required_skills,
+        experience_requirements: parsedJD.experience_requirements
+      });
     }
 
     setIsProcessing(false);
