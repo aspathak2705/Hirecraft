@@ -185,18 +185,32 @@ CREATE POLICY "Public insert evidence_items" ON evidence_items FOR INSERT TO pub
 CREATE POLICY "Public insert job_opportunities" ON job_opportunities FOR INSERT TO public WITH CHECK (true);
 CREATE POLICY "Public insert career_intelligence" ON career_intelligence FOR INSERT TO public WITH CHECK (true);
 
--- 2. Restrict SELECT/UPDATE of sensitive diagnostic, document, evidence, and AI intelligence tables to authenticated users/admins
-CREATE POLICY "Authenticated admin select diagnostic_sessions" ON diagnostic_sessions FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated admin update status and notes" ON diagnostic_sessions FOR UPDATE TO authenticated USING (true);
+-- 2. Restrict SELECT/UPDATE of diagnostic_sessions to authenticated admins only (verifying admin_roles table or service_role)
+CREATE POLICY "Admin select diagnostic_sessions" ON diagnostic_sessions FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
 
-CREATE POLICY "Authenticated admin select documents" ON documents FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated admin select document_sections" ON document_sections FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated admin select evidence_items" ON evidence_items FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated admin select job_opportunities" ON job_opportunities FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admin update status and notes" ON diagnostic_sessions FOR UPDATE TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
 
-CREATE POLICY "Public select career_intelligence" ON career_intelligence FOR SELECT TO public USING (true);
-CREATE POLICY "Authenticated admin select career_intelligence" ON career_intelligence FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admin select admin_roles" ON admin_roles FOR SELECT TO authenticated USING (true);
+-- 3. Restrict document, section, evidence, and JD access strictly to authenticated admin users
+CREATE POLICY "Admin select documents" ON documents FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
+
+CREATE POLICY "Admin select document_sections" ON document_sections FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
+
+CREATE POLICY "Admin select evidence_items" ON evidence_items FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
+
+CREATE POLICY "Admin select job_opportunities" ON job_opportunities FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
+
+-- 4. Restrict career_intelligence and admin_roles access to authenticated admins
+CREATE POLICY "Admin select career_intelligence" ON career_intelligence FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
+
+CREATE POLICY "Admin select admin_roles" ON admin_roles FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
 
 -- Private Storage Bucket Initialization Note:
 -- Bucket name: 'hirecraft_docs'

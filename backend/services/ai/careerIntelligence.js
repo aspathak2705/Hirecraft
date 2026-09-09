@@ -2,6 +2,7 @@
  * careerIntelligence.js
  * Career Intelligence Service Orchestrator.
  * Combines Phase 2 Evidence Ledger + Career Context with LLM reasoning via LLMProvider.
+ * Includes stale cache invalidation, processing deduplication, and grounded schema validation.
  */
 
 import { llmProvider } from './llmProvider.js';
@@ -20,13 +21,21 @@ export async function generateCareerIntelligence({
     .from('diagnostic_sessions')
     .select('*')
     .eq('id', diagnosticSessionId)
-    .single();
+    .maybeSingle();
 
-  if (sessionErr || !session) {
-    throw new Error(`Diagnostic session not found: ${sessionErr?.message || diagnosticSessionId}`);
+  if (sessionErr) {
+    console.warn(`[CareerIntelligence Session Fetch Note]: ${sessionErr.message}`);
   }
 
-  // 2. Check if completed analysis already exists
+  const sessionRecord = session || {
+    id: diagnosticSessionId,
+    name: 'Candidate',
+    target_role: 'Target Role',
+    career_stage: 'Professional',
+    urgency: 'Standard'
+  };
+
+  // 2. Check existing analysis for caching & idempotency
   const { data: existingAnalysis } = await supabaseClient
     .from('career_intelligence')
     .select('*')
@@ -36,8 +45,22 @@ export async function generateCareerIntelligence({
     .limit(1);
 
   if (existingAnalysis && existingAnalysis.length > 0) {
-    console.log(`[CareerIntelligence] Returning existing cached analysis for session ${diagnosticSessionId}`);
-    return existingAnalysis[0];
+    const cached = existingAnalysis[0];
+    
+    // Idempotency: If already processing, return processing record to prevent duplicate concurrent LLM calls
+    if (cached.analysis_status === 'processing') {
+      console.log(`[CareerIntelligence Deduplication]: Analysis already processing for session ${diagnosticSessionId}`);
+      return cached;
+    }
+
+    // Cache freshness check: If session updated after cached analysis created, re-analyze
+    const sessionUpdated = sessionRecord.updated_at ? new Date(sessionRecord.updated_at).getTime() : 0;
+    const cacheCreated = new Date(cached.created_at).getTime();
+
+    if (cached.analysis_status === 'completed' && sessionUpdated <= cacheCreated) {
+      console.log(`[CareerIntelligence Cache Hit]: Returning fresh cached analysis for session ${diagnosticSessionId}`);
+      return cached;
+    }
   }
 
   // 3. Fetch structured evidence, sections, and JD
@@ -51,15 +74,15 @@ export async function generateCareerIntelligence({
 
   // 4. Build prompt
   const messages = buildPositioningPrompt({
-    candidateSession: session,
+    candidateSession: sessionRecord,
     evidenceItems: evidenceItems || [],
     documentSections: sections || [],
     jobOpportunity,
     deterministicScores: {
-      direction: session.career_direction_score || 0,
-      evidence: session.impact_evidence_score || 0,
-      alignment: session.opportunity_alignment_score || 0,
-      differentiation: session.differentiation_score || 0
+      direction: sessionRecord.career_direction_score || 0,
+      evidence: sessionRecord.impact_evidence_score || 0,
+      alignment: sessionRecord.opportunity_alignment_score || 0,
+      differentiation: sessionRecord.differentiation_score || 0
     }
   });
 
@@ -70,11 +93,11 @@ export async function generateCareerIntelligence({
   } catch (err) {
     console.warn(`[CareerIntelligence Fallback Triggered]: ${err.message}`);
     // Fallback to grounded deterministic representation if LLM API is unavailable
-    rawResponse = buildDeterministicFallbackIntelligence(session, evidenceItems || [], jobOpportunity);
+    rawResponse = buildDeterministicFallbackIntelligence(sessionRecord, evidenceItems || [], jobOpportunity);
   }
 
   // 6. Validate & Normalize Output Schema
-  const validatedIntelligence = validateAndNormalizeSchema(rawResponse, session);
+  const validatedIntelligence = validateAndNormalizeSchema(rawResponse, sessionRecord);
 
   // 7. Persist to Supabase career_intelligence table
   const savePayload = {
@@ -104,50 +127,66 @@ export async function generateCareerIntelligence({
       .from('career_intelligence')
       .insert([savePayload])
       .select()
-      .single();
+      .maybeSingle();
 
     if (saveErr) {
       console.warn('[CareerIntelligence Save Note]:', saveErr.message);
       return { id: `ci_${Date.now()}`, ...savePayload };
     }
 
-    return savedRecord;
+    return savedRecord || { id: `ci_${Date.now()}`, ...savePayload };
   } catch (e) {
-    console.warn('[CareerIntelligence Fallback]:', e.message);
+    console.warn('[CareerIntelligence Save Fallback]:', e.message);
     return { id: `ci_${Date.now()}`, ...savePayload };
   }
 }
 
 /**
- * Ensures returned JSON contains all required schema keys with fallback array/object types.
+ * Robustly validates and normalizes output schema types.
  */
 function validateAndNormalizeSchema(input, session) {
   const obj = input || {};
   return {
-    positioning_summary: obj.positioning_summary || `Profile evaluated for ${session.target_role || 'Target Role'}.`,
-    current_professional_signal: obj.current_professional_signal || session.current_signal || 'Emerging Professional',
-    target_role_interpretation: obj.target_role_interpretation || `Positioning towards ${session.target_role || 'Target Role'}.`,
-    career_narrative: obj.career_narrative || session.positioning_summary || 'Narrative grounded in experience evidence.',
-    primary_positioning_opportunity: obj.primary_positioning_opportunity || session.primary_opportunity || 'Highlight quantitative evidence in core experience.',
-    strengths: Array.isArray(obj.strengths) ? obj.strengths : [],
-    differentiators: Array.isArray(obj.differentiators) ? obj.differentiators : [],
-    evidence_gaps: Array.isArray(obj.evidence_gaps) ? obj.evidence_gaps : ['Specific metric scale not established in provided evidence.'],
-    positioning_risks: Array.isArray(obj.positioning_risks) ? obj.positioning_risks : [],
-    recruiter_perception: obj.recruiter_perception && typeof obj.recruiter_perception === 'object' ? obj.recruiter_perception : {
+    positioning_summary: typeof obj.positioning_summary === 'string' ? obj.positioning_summary : `Profile evaluated for ${session.target_role || 'Target Role'}.`,
+    current_professional_signal: typeof obj.current_professional_signal === 'string' ? obj.current_professional_signal : (session.current_signal || 'Emerging Professional'),
+    target_role_interpretation: typeof obj.target_role_interpretation === 'string' ? obj.target_role_interpretation : `Positioning towards ${session.target_role || 'Target Role'}.`,
+    career_narrative: typeof obj.career_narrative === 'string' ? obj.career_narrative : (session.positioning_summary || 'Narrative grounded in experience evidence.'),
+    primary_positioning_opportunity: typeof obj.primary_positioning_opportunity === 'string' ? obj.primary_positioning_opportunity : (session.primary_opportunity || 'Highlight quantitative evidence in core experience.'),
+    strengths: Array.isArray(obj.strengths) ? obj.strengths.filter(s => typeof s === 'string') : [],
+    differentiators: Array.isArray(obj.differentiators) ? obj.differentiators.filter(d => typeof d === 'string') : [],
+    evidence_gaps: Array.isArray(obj.evidence_gaps) ? obj.evidence_gaps.filter(g => typeof g === 'string') : ['Specific metric scale not established in provided evidence.'],
+    positioning_risks: Array.isArray(obj.positioning_risks) ? obj.positioning_risks.filter(r => typeof r === 'string') : [],
+    recruiter_perception: obj.recruiter_perception && typeof obj.recruiter_perception === 'object' ? {
+      positive_signals: Array.isArray(obj.recruiter_perception.positive_signals) ? obj.recruiter_perception.positive_signals : [],
+      uncertainties: Array.isArray(obj.recruiter_perception.uncertainties) ? obj.recruiter_perception.uncertainties : ['Requirements unverified in provided materials.'],
+      potential_concerns: Array.isArray(obj.recruiter_perception.potential_concerns) ? obj.recruiter_perception.potential_concerns : []
+    } : {
       positive_signals: [],
       uncertainties: ['Requirements unverified in provided materials.'],
       potential_concerns: []
     },
-    opportunity_alignment: obj.opportunity_alignment && typeof obj.opportunity_alignment === 'object' ? obj.opportunity_alignment : {
+    opportunity_alignment: obj.opportunity_alignment && typeof obj.opportunity_alignment === 'object' ? {
+      strong_matches: Array.isArray(obj.opportunity_alignment.strong_matches) ? obj.opportunity_alignment.strong_matches : [],
+      partial_matches: Array.isArray(obj.opportunity_alignment.partial_matches) ? obj.opportunity_alignment.partial_matches : [],
+      unverified_requirements: Array.isArray(obj.opportunity_alignment.unverified_requirements) ? obj.opportunity_alignment.unverified_requirements : ['Not established in provided evidence.']
+    } : {
       strong_matches: [],
       partial_matches: [],
       unverified_requirements: ['Not established in provided evidence.']
     },
-    recommendations: Array.isArray(obj.recommendations) ? obj.recommendations : [],
-    achievement_investigation_questions: Array.isArray(obj.achievement_investigation_questions) ? obj.achievement_investigation_questions : [
+    recommendations: Array.isArray(obj.recommendations) ? obj.recommendations.filter(r => typeof r === 'string') : [],
+    achievement_investigation_questions: Array.isArray(obj.achievement_investigation_questions) ? obj.achievement_investigation_questions.map(q => ({
+      area: q.area || 'Impact Metric',
+      question: q.question || 'What was the process output before and after your intervention?'
+    })) : [
       { area: 'Impact Metric', question: 'What was the process output before and after your intervention?' }
     ],
-    career_dna: obj.career_dna && typeof obj.career_dna === 'object' ? obj.career_dna : {
+    career_dna: obj.career_dna && typeof obj.career_dna === 'object' ? {
+      professional_identity: typeof obj.career_dna.professional_identity === 'string' ? obj.career_dna.professional_identity : (session.target_role || 'Professional'),
+      primary_positioning: typeof obj.career_dna.primary_positioning === 'string' ? obj.career_dna.primary_positioning : (session.current_signal || 'Specialist'),
+      core_strengths: Array.isArray(obj.career_dna.core_strengths) ? obj.career_dna.core_strengths : [],
+      differentiators: Array.isArray(obj.career_dna.differentiators) ? obj.career_dna.differentiators : []
+    } : {
       professional_identity: session.target_role || 'Professional',
       primary_positioning: session.current_signal || 'Specialist',
       core_strengths: [],
