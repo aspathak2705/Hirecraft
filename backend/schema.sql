@@ -136,19 +136,21 @@ ALTER TABLE evidence_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_opportunities ENABLE ROW LEVEL SECURITY;
 
 -- Security Policies (RLS)
--- Public users can insert their diagnostic session & related records
-CREATE POLICY "Public insert diagnostic_sessions" ON diagnostic_sessions FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public insert documents" ON documents FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public insert document_sections" ON document_sections FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public insert evidence_items" ON evidence_items FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public insert job_opportunities" ON job_opportunities FOR INSERT WITH CHECK (true);
+-- 1. Public (anon) users can submit (INSERT) their diagnostic session & related telemetry
+CREATE POLICY "Public insert diagnostic_sessions" ON diagnostic_sessions FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "Public insert documents" ON documents FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "Public insert document_sections" ON document_sections FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "Public insert evidence_items" ON evidence_items FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "Public insert job_opportunities" ON job_opportunities FOR INSERT TO public WITH CHECK (true);
 
--- Public users can select/update their current session (simplified session access)
-CREATE POLICY "Public select diagnostic_sessions" ON diagnostic_sessions FOR SELECT USING (true);
-CREATE POLICY "Public update diagnostic_sessions" ON diagnostic_sessions FOR UPDATE USING (true);
+-- 2. Prevent anonymous public mass read/update of internal notes, status, and sensitive documents
+-- Only authenticated admin roles can view & update full diagnostic session records and internal notes
+CREATE POLICY "Authenticated admin select diagnostic_sessions" ON diagnostic_sessions FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Authenticated admin update status and notes" ON diagnostic_sessions FOR UPDATE TO authenticated USING (true);
 
--- Restrict sensitive tables (documents, evidence_items, internal notes) from anonymous mass reading
+-- 3. Restrict document, section, evidence, and JD access strictly to authenticated admin users
 CREATE POLICY "Authenticated admin select documents" ON documents FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Authenticated admin select document_sections" ON document_sections FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated admin select evidence_items" ON evidence_items FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated admin select job_opportunities" ON job_opportunities FOR SELECT TO authenticated USING (true);
 
