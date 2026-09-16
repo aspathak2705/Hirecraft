@@ -273,6 +273,44 @@ CREATE POLICY "Public update job_twins" ON job_twins FOR UPDATE TO public USING 
 CREATE POLICY "Admin select job_twins" ON job_twins FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
 
+-- 10. Create application_packages table (Phase 7 Application Positioning Package)
+CREATE TABLE IF NOT EXISTS application_packages (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  diagnostic_session_id uuid REFERENCES diagnostic_sessions(id) ON DELETE CASCADE,
+  job_twin_id uuid REFERENCES job_twins(id) ON DELETE CASCADE,
+  interview_session_id uuid REFERENCES interview_sessions(id) ON DELETE SET NULL,
+  
+  job_title text NOT NULL,
+  company text,
+  package_version text DEFAULT 'v1.0',
+  fingerprint text,
+  
+  positioning_summary text NOT NULL,
+  narrative_strategy text NOT NULL,
+  primary_evidence jsonb DEFAULT '[]'::jsonb,
+  secondary_evidence jsonb DEFAULT '[]'::jsonb,
+  opportunity_gaps jsonb DEFAULT '[]'::jsonb,
+  unverified_requirements jsonb DEFAULT '[]'::jsonb,
+  candidate_reported_signals jsonb DEFAULT '[]'::jsonb,
+  clarification_areas jsonb DEFAULT '[]'::jsonb,
+  achievement_evidence_to_strengthen jsonb DEFAULT '[]'::jsonb,
+  claim_ledger jsonb DEFAULT '[]'::jsonb,
+  positioning_recommendations jsonb DEFAULT '[]'::jsonb,
+  
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_application_packages_diagnostic ON application_packages(diagnostic_session_id);
+CREATE INDEX IF NOT EXISTS idx_application_packages_job_twin ON application_packages(job_twin_id);
+
+ALTER TABLE application_packages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public insert application_packages" ON application_packages FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "Public select application_packages" ON application_packages FOR SELECT TO public USING (true);
+CREATE POLICY "Public update application_packages" ON application_packages FOR UPDATE TO public USING (true);
+CREATE POLICY "Admin select application_packages" ON application_packages FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
+
 -- Private Storage Bucket Initialization Note:
 -- Bucket name: 'hirecraft_docs'
 -- Setting: public = false (PRIVATE BUCKET)

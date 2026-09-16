@@ -119,7 +119,19 @@ export async function generateJobTwin({
     if (session) sessionRecord = session;
     if (evidence) evidenceItems = evidence;
     if (intel && intel.length > 0) intelRecord = intel[0];
-    if (interview && interview.data) interviewRecord = interview.data;
+    
+    // Strict Ownership Check: Reject interview session if it does NOT belong to this diagnosticSessionId
+    if (interview && interview.data) {
+      if (interview.data.diagnostic_session_id !== diagnosticSessionId) {
+        throw new Error('Security Violation: Interview session does not belong to requested diagnostic session.');
+      }
+      interviewRecord = interview.data;
+    }
+  }
+
+  // Reject provided interview record if mismatched
+  if (interviewRecord && interviewRecord.diagnostic_session_id && interviewRecord.diagnostic_session_id !== diagnosticSessionId) {
+    throw new Error('Security Violation: Provided interview session does not belong to requested diagnostic session.');
   }
 
   sessionRecord = sessionRecord || { id: diagnosticSessionId, name: 'Candidate', target_role: jobTitle || 'Target Role' };

@@ -1,9 +1,22 @@
-import React from 'react';
-import { Target, CheckCircle, ShieldAlert, AlertTriangle, Sparkles, Printer, ArrowRight, Layers, Award } from 'lucide-react';
+import React, { useState } from 'react';
+import { Target, CheckCircle, ShieldAlert, AlertTriangle, Sparkles, Printer, ArrowRight, Layers, Award, Package } from 'lucide-react';
 import { trackEvent } from '../../utils/analytics';
+import ApplicationPackageReport from '../application/ApplicationPackageReport';
 
 export default function JobTwinReport({ jobTwin, candidateName, onClose }) {
+  const [showPackage, setShowPackage] = useState(false);
+
   if (!jobTwin) return null;
+
+  if (showPackage) {
+    return (
+      <ApplicationPackageReport 
+        jobTwin={jobTwin} 
+        candidateName={candidateName} 
+        onClose={() => setShowPackage(false)} 
+      />
+    );
+  }
 
   const { job_title, company, evidence_matrix = [], positioning_strategy = {} } = jobTwin;
   const strat = typeof positioning_strategy === 'string' ? JSON.parse(positioning_strategy) : positioning_strategy;
@@ -52,7 +65,15 @@ export default function JobTwinReport({ jobTwin, candidateName, onClose }) {
           </div>
         </div>
 
-        <div className="no-print" style={{ display: 'flex', gap: '10px' }}>
+        <div className="no-print" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button 
+            onClick={() => setShowPackage(true)} 
+            className="btn-primary" 
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', fontWeight: 700 }}
+          >
+            <Package size={16} /> View Application Positioning Package
+          </button>
+
           <button onClick={handlePrint} className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             <Printer size={16} /> Print / Download PDF
           </button>

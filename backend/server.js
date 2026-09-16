@@ -13,6 +13,7 @@ import { generateCareerIntelligence } from './services/ai/careerIntelligence.js'
 import { sendCareerReportEmail } from './services/emailService.js';
 import { generateInterviewQuestions, evaluateInterviewAnswers } from './services/ai/interviewEngine.js';
 import { generateJobTwin } from './services/ai/jobTwinEngine.js';
+import { generateApplicationPackage } from './services/ai/applicationPackageEngine.js';
 
 // Load environment variables
 dotenv.config();
@@ -280,6 +281,60 @@ app.get('/api/v1/job-twin/:sessionId', async (req, res) => {
     return res.json({ success: true, data: twins && twins.length > 0 ? twins[0] : null });
   } catch (err) {
     console.error('[API GET /job-twin Error]:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * 9. POST /api/v1/application-package/generate
+ * Generates Application Positioning Package from Job Twin & Evidence (0 LLM calls).
+ */
+app.post('/api/v1/application-package/generate', analyzeLimiter, async (req, res) => {
+  const { diagnostic_session_id, job_twin_id } = req.body;
+
+  if (!diagnostic_session_id || !job_twin_id) {
+    return res.status(400).json({ success: false, error: 'Missing diagnostic_session_id or job_twin_id.' });
+  }
+
+  try {
+    console.log(`[API /application-package/generate] Generating package for session: ${diagnostic_session_id}, twin: ${job_twin_id}`);
+    const pkg = await generateApplicationPackage({
+      supabaseClient: supabase,
+      diagnosticSessionId: diagnostic_session_id,
+      jobTwinId: job_twin_id
+    });
+
+    return res.json({ success: true, data: pkg });
+  } catch (err) {
+    console.error('[API /application-package/generate Error]:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * 10. GET /api/v1/application-package/:sessionId
+ * Fetches Application Positioning Package for session.
+ */
+app.get('/api/v1/application-package/:sessionId', async (req, res) => {
+  const { sessionId } = req.params;
+
+  if (!isValidUuid(sessionId)) {
+    return res.status(400).json({ success: false, error: 'Invalid sessionId UUID format.' });
+  }
+
+  try {
+    const { data: pkgs, error } = await supabase
+      .from('application_packages')
+      .select('*')
+      .eq('diagnostic_session_id', sessionId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+
+    return res.json({ success: true, data: pkgs && pkgs.length > 0 ? pkgs[0] : null });
+  } catch (err) {
+    console.error('[API GET /application-package Error]:', err.message);
     return res.status(500).json({ success: false, error: err.message });
   }
 });
