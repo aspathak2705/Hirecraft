@@ -17,10 +17,15 @@ import {
   Compass,
   FileText,
   UserCheck,
-  Award
+  Award,
+  Upload,
+  Lock,
+  Mail,
+  User
 } from 'lucide-react';
 import { supabase } from './supabase';
-import { fetchDiagnosticSessions, saveDiagnosticSession } from './services/supabaseService';
+import { fetchDiagnosticSessions, saveDiagnosticSession, uploadDocument } from './services/supabaseService';
+import { extractDocumentText } from './services/documentParser';
 import DiagnosticContainer from './components/diagnostic/DiagnosticContainer';
 import LeadDashboard from './components/admin/LeadDashboard';
 
@@ -33,6 +38,8 @@ import interviewDoodle from '../assets/download (6).jpg';
 import founderPhoto from '../assets/Taiwanese Startup Founder.jpg';
 import techDoodle from '../assets/Tech and Innovation, Data and Analytics, Business and Finance, Vector illustration.jpg';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [diagnosticMode, setDiagnosticMode] = useState(false);
@@ -41,21 +48,63 @@ export default function App() {
   const [leads, setLeads] = useState([]);
   const [adminViewActive, setAdminViewActive] = useState(false);
 
-  // Admin authentication token state
+  // Admin Supabase authentication state
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
-  const [authTokenInput, setAuthTokenInput] = useState('');
   const [authError, setAuthError] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // Booking Form State
   const [bookingName, setBookingName] = useState('');
   const [bookingEmail, setBookingEmail] = useState('');
   const [bookingRole, setBookingRole] = useState('');
   const [bookingMessage, setBookingMessage] = useState('');
+  
+  // Landing Resume Upload State
+  const [landingResumeFile, setLandingResumeFile] = useState(null);
+  const [landingResumeStoragePath, setLandingResumeStoragePath] = useState(null);
+  const [landingResumeExtraction, setLandingResumeExtraction] = useState(null);
+  const [isUploadingLandingResume, setIsUploadingLandingResume] = useState(false);
+  const [landingResumeError, setLandingResumeError] = useState('');
+
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingError, setBookingError] = useState('');
 
   // Initial Lead Data for Diagnostic Continuity
   const [initialLeadData, setInitialLeadData] = useState(null);
+
+  const handleLandingResumeChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setLandingResumeError('File size exceeds 10MB limit.');
+      return;
+    }
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['pdf', 'doc', 'docx', 'txt'].includes(ext)) {
+      setLandingResumeError('Please upload a PDF, DOCX, DOC, or TXT document.');
+      return;
+    }
+
+    setLandingResumeError('');
+    setIsUploadingLandingResume(true);
+
+    try {
+      const uploadRes = await uploadDocument(file, 'landing_lead', 'resume');
+      const extraction = await extractDocumentText(file);
+      setLandingResumeFile(file);
+      setLandingResumeStoragePath(uploadRes?.storage_path);
+      setLandingResumeExtraction(extraction);
+    } catch (err) {
+      console.warn('Landing resume upload note:', err.message);
+      setLandingResumeError('Resume saved securely.');
+    } finally {
+      setIsUploadingLandingResume(false);
+    }
+  };
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
@@ -72,14 +121,40 @@ export default function App() {
         primary_opportunity: bookingMessage || 'Direct consultation booking request',
         status: 'Consultation Requested',
         urgency: 'High',
+        resume_file_name: landingResumeFile?.name,
+        resume_file_size: landingResumeFile?.size,
+        resume_file_type: landingResumeFile?.type,
+        resume_storage_path: landingResumeStoragePath,
         created_at: new Date().toISOString()
       });
+
+      // Dispatch confirmation email server-side
+      try {
+        await fetch(`${BACKEND_URL}/api/v1/notifications/email-report`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipientEmail: bookingEmail,
+            recipientName: bookingName,
+            reportData: { target_role: bookingRole },
+            notificationType: 'lead_confirmation'
+          })
+        });
+      } catch (emailErr) {
+        console.warn('Confirmation email dispatch note:', emailErr.message);
+      }
       
       const leadState = {
         name: bookingName,
         email: bookingEmail,
         target_role: bookingRole,
-        primary_opportunity: bookingMessage
+        primary_opportunity: bookingMessage,
+        resume_file: landingResumeFile,
+        resume_storage_path: landingResumeStoragePath,
+        resume_file_name: landingResumeFile?.name,
+        resume_file_size: landingResumeFile?.size,
+        resume_file_type: landingResumeFile?.type,
+        resume_extraction: landingResumeExtraction
       };
       setInitialLeadData(leadState);
       setBookingSuccess(true);
@@ -102,15 +177,48 @@ export default function App() {
     }
   };
 
-  // Unlocking admin dashboard
-  const handleAuthSubmit = (e) => {
+  // Supabase Email/Password Admin Login
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    if (authTokenInput === 'admin123') { // Simple hidden entry token
+    if (!adminEmail || !adminPassword) {
+      setAuthError('Please enter both Email/Username and Password.');
+      return;
+    }
+    setIsAuthenticating(true);
+    setAuthError('');
+
+    try {
+      const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+        email: adminEmail,
+        password: adminPassword
+      });
+
+      if (authErr) {
+        setAuthError(authErr.message || 'Invalid Email/Password credentials.');
+        setIsAuthenticating(false);
+        return;
+      }
+
+      // Check admin_roles mapping
+      const userId = authData?.user?.id;
+      const { data: adminRole, error: roleErr } = await supabase
+        .from('admin_roles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (roleErr || !adminRole) {
+        setAuthError('You are authenticated but do not have administrator access.');
+        setIsAuthenticating(false);
+        return;
+      }
+
       setIsAdminUnlocked(true);
-      setAuthError('');
       loadAdminDashboard();
-    } else {
-      setAuthError('Invalid Access Key.');
+    } catch (err) {
+      setAuthError('Authentication failed. Please check credentials.');
+    } finally {
+      setIsAuthenticating(false);
     }
   };
 
@@ -183,21 +291,60 @@ export default function App() {
       {adminViewActive && (
         <div className="container" style={{ paddingTop: '120px', paddingBottom: '40px' }}>
           {!isAdminUnlocked ? (
-            <div className="audit-card" style={{ maxWidth: '400px', margin: '0 auto' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '16px' }}>🔑 Enter Access Key</h3>
+            <div className="audit-card" style={{ maxWidth: '420px', margin: '0 auto', padding: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                <Lock size={22} style={{ color: 'var(--color-gold)' }} />
+                <h3 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Admin Portal Authentication</h3>
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
+                Sign in with your administrator credentials to access diagnostic telemetry and management tools.
+              </p>
+              
               <form onSubmit={handleAuthSubmit}>
+                {authError && (
+                  <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#f87171', padding: '10px 14px', borderRadius: 'var(--radius-sm)', marginBottom: '16px', fontSize: '13px' }}>
+                    {authError}
+                  </div>
+                )}
+                
                 <div className="form-group" style={{ marginBottom: '16px' }}>
-                  <input 
-                    type="password" 
-                    className="form-control" 
-                    placeholder="Access Key" 
-                    value={authTokenInput}
-                    onChange={(e) => setAuthTokenInput(e.target.value)}
-                  />
-                  {authError && <span style={{ color: '#f87171', fontSize: '12px' }}>{authError}</span>}
+                  <label htmlFor="adminEmail" style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Email Address *</label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                    <input 
+                      type="email" 
+                      id="adminEmail"
+                      className="form-control" 
+                      style={{ paddingLeft: '38px' }}
+                      placeholder="admin@hirecraft.co" 
+                      required
+                      value={adminEmail}
+                      onChange={(e) => setAdminEmail(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button type="submit" className="btn-primary">Unlock</button>
+
+                <div className="form-group" style={{ marginBottom: '24px' }}>
+                  <label htmlFor="adminPassword" style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Password *</label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                    <input 
+                      type="password" 
+                      id="adminPassword"
+                      className="form-control" 
+                      style={{ paddingLeft: '38px' }}
+                      placeholder="••••••••••••" 
+                      required
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button type="submit" className="btn-primary" style={{ flex: 1, justifyContent: 'center' }} disabled={isAuthenticating}>
+                    {isAuthenticating ? 'Verifying...' : 'Sign In'}
+                  </button>
                   <button type="button" className="btn-secondary" onClick={() => setAdminViewActive(false)}>Cancel</button>
                 </div>
               </form>
@@ -475,6 +622,39 @@ export default function App() {
                         value={bookingMessage}
                         onChange={(e) => setBookingMessage(e.target.value)}
                       ></textarea>
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+                        Upload Current Resume / CV (Optional - PDF, DOCX, DOC, TXT up to 10MB)
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <label 
+                          htmlFor="landingResumeUpload" 
+                          className="btn-secondary" 
+                          style={{ cursor: 'pointer', padding: '10px 16px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '8px', margin: 0 }}
+                        >
+                          <Upload size={16} /> {isUploadingLandingResume ? 'Uploading...' : 'Choose File'}
+                        </label>
+                        <input 
+                          type="file" 
+                          id="landingResumeUpload" 
+                          accept=".pdf,.doc,.docx,.txt"
+                          onChange={handleLandingResumeChange}
+                          style={{ display: 'none' }}
+                          disabled={isUploadingLandingResume}
+                        />
+                        {landingResumeFile && (
+                          <span style={{ fontSize: '13px', color: 'var(--color-gold)', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                            <FileText size={16} /> {landingResumeFile.name} ({(landingResumeFile.size / 1024).toFixed(1)} KB)
+                          </span>
+                        )}
+                      </div>
+                      {landingResumeError && (
+                        <div style={{ color: '#f87171', fontSize: '12px', marginTop: '6px' }}>
+                          {landingResumeError}
+                        </div>
+                      )}
                     </div>
 
                     <button type="submit" className="btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}>

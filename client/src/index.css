@@ -57,6 +57,9 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 a {
@@ -615,6 +618,33 @@ button {
   box-shadow: 0 0 0 2px var(--color-gold-glow);
 }
 
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+}
+
 /* Footer Section */
 .footer {
   background-color: #0F172A; /* Slate-900 background to secure strong contrast */
@@ -622,6 +652,7 @@ button {
   padding: 60px 0 30px;
   font-size: 14px;
   color: #94A3B8; /* explicit light slate gray */
+  margin-top: auto;
 }
 
 .footer-grid {
