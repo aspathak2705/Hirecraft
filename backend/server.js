@@ -11,6 +11,7 @@ import rateLimit from 'express-rate-limit';
 import { createClient } from '@supabase/supabase-js';
 import { generateCareerIntelligence } from './services/ai/careerIntelligence.js';
 import { sendCareerReportEmail } from './services/emailService.js';
+import { generateInterviewQuestions, evaluateInterviewAnswers } from './services/ai/interviewEngine.js';
 
 // Load environment variables
 dotenv.config();
@@ -170,6 +171,57 @@ app.post('/api/v1/notifications/email-report', async (req, res) => {
     return res.json({ success: true, data: result });
   } catch (err) {
     console.error('[API /email-report Error]:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * 5. POST /api/v1/interview/generate
+ * LLM CALL #1: Generates 10 personalized interview questions.
+ */
+app.post('/api/v1/interview/generate', analyzeLimiter, async (req, res) => {
+  const { diagnostic_session_id } = req.body;
+
+  if (!diagnostic_session_id) {
+    return res.status(400).json({ success: false, error: 'Missing diagnostic_session_id.' });
+  }
+
+  try {
+    console.log(`[API /interview/generate] Generating 10 questions for session: ${diagnostic_session_id}`);
+    const result = await generateInterviewQuestions({
+      supabaseClient: supabase,
+      diagnosticSessionId: diagnostic_session_id
+    });
+
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('[API /interview/generate Error]:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * 6. POST /api/v1/interview/evaluate
+ * LLM CALL #2: Analyzes candidate answers to all 10 questions at once and returns Evaluation Report.
+ */
+app.post('/api/v1/interview/evaluate', analyzeLimiter, async (req, res) => {
+  const { interview_session_id, answers } = req.body;
+
+  if (!interview_session_id || !Array.isArray(answers)) {
+    return res.status(400).json({ success: false, error: 'Missing interview_session_id or answers array.' });
+  }
+
+  try {
+    console.log(`[API /interview/evaluate] Evaluating ${answers.length} answers for interview session: ${interview_session_id}`);
+    const evaluation = await evaluateInterviewAnswers({
+      supabaseClient: supabase,
+      interviewSessionId: interview_session_id,
+      answers
+    });
+
+    return res.json({ success: true, data: evaluation });
+  } catch (err) {
+    console.error('[API /interview/evaluate Error]:', err.message);
     return res.status(500).json({ success: false, error: err.message });
   }
 });

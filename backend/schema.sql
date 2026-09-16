@@ -160,12 +160,34 @@ CREATE TABLE IF NOT EXISTS career_intelligence (
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 8. Create interview_sessions table (Phase 5 2-Call AI Career Interview System)
+CREATE TABLE IF NOT EXISTS interview_sessions (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  diagnostic_session_id uuid REFERENCES diagnostic_sessions(id) ON DELETE CASCADE,
+  model text DEFAULT 'nvidia/nemotron-3-super-120b-a12b:free' NOT NULL,
+  provider text DEFAULT 'openrouter' NOT NULL,
+  status text DEFAULT 'in_progress' NOT NULL, -- 'in_progress', 'completed', 'failed'
+  
+  -- Structured 10 Questions Array (Generated in LLM Call #1)
+  questions jsonb DEFAULT '[]'::jsonb,
+  
+  -- Candidate Responses Array
+  answers jsonb DEFAULT '[]'::jsonb,
+  
+  -- Final Evaluation Report (Generated in LLM Call #2)
+  evaluation jsonb DEFAULT '{}'::jsonb,
+  
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_documents_session ON documents(diagnostic_session_id);
 CREATE INDEX IF NOT EXISTS idx_sections_document ON document_sections(document_id);
 CREATE INDEX IF NOT EXISTS idx_evidence_session ON evidence_items(diagnostic_session_id);
 CREATE INDEX IF NOT EXISTS idx_evidence_document ON evidence_items(document_id);
 CREATE INDEX IF NOT EXISTS idx_career_intelligence_session ON career_intelligence(diagnostic_session_id);
+CREATE INDEX IF NOT EXISTS idx_interview_sessions_diagnostic ON interview_sessions(diagnostic_session_id);
 
 -- Enable RLS on all tables
 ALTER TABLE diagnostic_sessions ENABLE ROW LEVEL SECURITY;
@@ -175,6 +197,7 @@ ALTER TABLE evidence_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_opportunities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE career_intelligence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE interview_sessions ENABLE ROW LEVEL SECURITY;
 
 -- Security Policies (RLS)
 -- 1. Public (anon) users can submit (INSERT) their diagnostic session & related telemetry
@@ -184,6 +207,9 @@ CREATE POLICY "Public insert document_sections" ON document_sections FOR INSERT 
 CREATE POLICY "Public insert evidence_items" ON evidence_items FOR INSERT TO public WITH CHECK (true);
 CREATE POLICY "Public insert job_opportunities" ON job_opportunities FOR INSERT TO public WITH CHECK (true);
 CREATE POLICY "Public insert career_intelligence" ON career_intelligence FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "Public insert interview_sessions" ON interview_sessions FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "Public select interview_sessions" ON interview_sessions FOR SELECT TO public USING (true);
+CREATE POLICY "Public update interview_sessions" ON interview_sessions FOR UPDATE TO public USING (true);
 
 -- 2. Restrict SELECT/UPDATE of diagnostic_sessions to authenticated admins only (verifying admin_roles table or service_role)
 CREATE POLICY "Admin select diagnostic_sessions" ON diagnostic_sessions FOR SELECT TO authenticated
@@ -210,6 +236,9 @@ CREATE POLICY "Admin select career_intelligence" ON career_intelligence FOR SELE
   USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
 
 CREATE POLICY "Admin select admin_roles" ON admin_roles FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
+
+CREATE POLICY "Admin select interview_sessions" ON interview_sessions FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
 
 -- Private Storage Bucket Initialization Note:

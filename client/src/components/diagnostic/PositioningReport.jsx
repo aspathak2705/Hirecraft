@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, ArrowRight, CheckCircle, ShieldAlert, Sparkles, UserCheck, HelpCircle, FileText, Target, AlertCircle, Printer, Download, Mail } from 'lucide-react';
+import { Lock, ArrowRight, CheckCircle, ShieldAlert, Sparkles, UserCheck, HelpCircle, FileText, Target, AlertCircle, Printer, Download, Mail, Play, MessageSquare } from 'lucide-react';
 import { updateSessionConsultation } from '../../services/supabaseService';
 import { fetchCareerIntelligence } from '../../services/careerIntelligenceService';
 import { trackEvent } from '../../utils/analytics';
+import InterviewContainer from '../interview/InterviewContainer';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
@@ -11,6 +12,7 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
 
   const [intelligence, setIntelligence] = useState(null);
   const [loadingIntelligence, setLoadingIntelligence] = useState(true);
+  const [showInterviewModal, setShowInterviewModal] = useState(false);
 
   const [consultationRequested, setConsultationRequested] = useState(false);
   const [preferredContact, setPreferredContact] = useState('Email');
@@ -122,6 +124,14 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
 
         {/* Action Toolbar */}
         <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '20px', flexWrap: 'wrap' }}>
+          <button 
+            onClick={() => setShowInterviewModal(true)} 
+            className="btn-primary" 
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #d97706, #f59e0b)', border: 'none', fontWeight: 700 }}
+          >
+            <Sparkles size={16} /> Launch AI Career Interview
+          </button>
+
           <button onClick={handlePrintReport} className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
             <Printer size={16} /> Download / Print Strategy Report
           </button>
@@ -131,6 +141,29 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
           </button>
         </div>
       </div>
+
+      {/* AI INTERVIEW ENGINE MODAL */}
+      {showInterviewModal && (
+        <div className="no-print" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 9999,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '20px',
+          overflowY: 'auto'
+        }}>
+          <div style={{ width: '100%', maxWidth: '900px', maxHeight: '95vh', overflowY: 'auto', borderRadius: '16px' }}>
+            <InterviewContainer sessionId={sessionId} onCancel={() => setShowInterviewModal(false)} />
+          </div>
+        </div>
+      )}
 
       {/* 1. CAREER POSITIONING SUMMARY & RECRUITER REALITY MIRROR */}
       <div 
