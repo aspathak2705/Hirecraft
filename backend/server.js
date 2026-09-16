@@ -10,6 +10,7 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import { createClient } from '@supabase/supabase-js';
 import { generateCareerIntelligence } from './services/ai/careerIntelligence.js';
+import { sendCareerReportEmail } from './services/emailService.js';
 
 // Load environment variables
 dotenv.config();
@@ -144,6 +145,32 @@ app.post('/api/v1/career-intelligence/analyze', analyzeLimiter, async (req, res)
       error: "We couldn't complete your positioning analysis right now. Your submitted information is safe.",
       details: err.message
     });
+  }
+});
+
+/**
+ * 4. POST /api/v1/notifications/email-report
+ * Dispatches a professional strategy report email notification.
+ */
+app.post('/api/v1/notifications/email-report', async (req, res) => {
+  const { recipientEmail, recipientName, reportData, notificationType } = req.body;
+
+  if (!recipientEmail) {
+    return res.status(400).json({ success: false, error: 'Missing recipientEmail.' });
+  }
+
+  try {
+    const result = await sendCareerReportEmail({
+      recipientEmail,
+      recipientName,
+      reportData,
+      notificationType
+    });
+
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('[API /email-report Error]:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 

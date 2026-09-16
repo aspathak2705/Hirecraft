@@ -24,20 +24,20 @@ const STEP_LABELS = [
   'Career Context'
 ];
 
-export default function DiagnosticContainer({ onCancel }) {
+export default function DiagnosticContainer({ onCancel, initialLeadData = null }) {
   const [step, setStep] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [sessionId, setSessionId] = useState(null);
 
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    career_stage: '',
-    opportunity_type: '',
-    target_role: '',
-    opportunity_timeline: '',
+    name: initialLeadData?.name || '',
+    email: initialLeadData?.email || '',
+    phone: initialLeadData?.phone || '',
+    career_stage: initialLeadData?.career_stage || '',
+    opportunity_type: initialLeadData?.opportunity_type || '',
+    target_role: initialLeadData?.target_role || '',
+    opportunity_timeline: initialLeadData?.opportunity_timeline || '',
     linkedin_url: '',
     portfolio_url: '',
     github_url: '',

@@ -54,6 +54,9 @@ export default function App() {
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingError, setBookingError] = useState('');
 
+  // Initial Lead Data for Diagnostic Continuity
+  const [initialLeadData, setInitialLeadData] = useState(null);
+
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     if (!bookingName || !bookingEmail || !bookingRole) {
@@ -71,10 +74,21 @@ export default function App() {
         urgency: 'High',
         created_at: new Date().toISOString()
       });
+      
+      const leadState = {
+        name: bookingName,
+        email: bookingEmail,
+        target_role: bookingRole,
+        primary_opportunity: bookingMessage
+      };
+      setInitialLeadData(leadState);
       setBookingSuccess(true);
+
+      // Scroll smoothly to diagnostic section to continue audit
+      scrollTo('audit');
     } catch (err) {
       console.error('Booking submission error:', err);
-      setBookingSuccess(true); // Fallback UI success for user
+      setBookingSuccess(true);
     }
   };
 
@@ -335,7 +349,7 @@ export default function App() {
                 <p className="section-desc">Assess how recruiters view your professional brand narrative in under 3 minutes.</p>
               </div>
 
-              <DiagnosticContainer />
+              <DiagnosticContainer initialLeadData={initialLeadData} />
             </div>
           </section>
 
