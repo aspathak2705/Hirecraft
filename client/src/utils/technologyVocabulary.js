@@ -64,5 +64,13 @@ export const TECH_VOCABULARY = [
   { name: 'Scrum', category: 'Methodology' },
   { name: 'Tableau', category: 'Analytics' },
   { name: 'Power BI', category: 'Analytics' },
-  { name: 'Google Analytics', category: 'Analytics' }
+  { name: 'Google Analytics', category: 'Analytics' },
+
+  // AI & ML / Data Engineering
+  { name: 'PyTorch', category: 'AI/ML' },
+  { name: 'TensorFlow', category: 'AI/ML' },
+  { name: 'RAG', category: 'AI/ML' },
+  { name: 'LangChain', category: 'AI/ML' },
+  { name: 'LLM', category: 'AI/ML' },
+  { name: 'OpenAI', category: 'AI/ML' }
 ];

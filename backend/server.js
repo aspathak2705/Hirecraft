@@ -12,6 +12,7 @@ import { createClient } from '@supabase/supabase-js';
 import { generateCareerIntelligence } from './services/ai/careerIntelligence.js';
 import { sendCareerReportEmail } from './services/emailService.js';
 import { generateInterviewQuestions, evaluateInterviewAnswers } from './services/ai/interviewEngine.js';
+import { generateJobTwin } from './services/ai/jobTwinEngine.js';
 
 // Load environment variables
 dotenv.config();
@@ -222,6 +223,63 @@ app.post('/api/v1/interview/evaluate', analyzeLimiter, async (req, res) => {
     return res.json({ success: true, data: evaluation });
   } catch (err) {
     console.error('[API /interview/evaluate Error]:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * 7. POST /api/v1/job-twin/generate
+ * Generates or retrieves opportunity-specific Job Twin positioning strategy.
+ */
+app.post('/api/v1/job-twin/generate', analyzeLimiter, async (req, res) => {
+  const { diagnostic_session_id, job_title, company, jd_text, interview_session_id } = req.body;
+
+  if (!diagnostic_session_id || !job_title || !jd_text) {
+    return res.status(400).json({ success: false, error: 'Missing diagnostic_session_id, job_title, or jd_text.' });
+  }
+
+  try {
+    console.log(`[API /job-twin/generate] Generating Job Twin for session: ${diagnostic_session_id}, role: ${job_title}`);
+    const result = await generateJobTwin({
+      supabaseClient: supabase,
+      diagnosticSessionId: diagnostic_session_id,
+      jobTitle: job_title,
+      company,
+      jdText: jd_text,
+      interviewSessionId: interview_session_id
+    });
+
+    return res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('[API /job-twin/generate Error]:', err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * 8. GET /api/v1/job-twin/:sessionId
+ * Fetches Job Twin for session.
+ */
+app.get('/api/v1/job-twin/:sessionId', async (req, res) => {
+  const { sessionId } = req.params;
+
+  if (!isValidUuid(sessionId)) {
+    return res.status(400).json({ success: false, error: 'Invalid sessionId UUID format.' });
+  }
+
+  try {
+    const { data: twins, error } = await supabase
+      .from('job_twins')
+      .select('*')
+      .eq('diagnostic_session_id', sessionId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+
+    return res.json({ success: true, data: twins && twins.length > 0 ? twins[0] : null });
+  } catch (err) {
+    console.error('[API GET /job-twin Error]:', err.message);
     return res.status(500).json({ success: false, error: err.message });
   }
 });

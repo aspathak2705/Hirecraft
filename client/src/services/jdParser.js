@@ -3,8 +3,8 @@
  * Deterministic Job Description structuring & evidence alignment module.
  */
 
-import { TECH_VOCABULARY } from '../utils/technologyVocabulary';
-import { normalizeText } from '../utils/textNormalizer';
+import { TECH_VOCABULARY } from '../utils/technologyVocabulary.js';
+import { normalizeText } from '../utils/textNormalizer.js';
 
 /**
  * Extracts key signals (skills, responsibilities, domain terms) from JD text.

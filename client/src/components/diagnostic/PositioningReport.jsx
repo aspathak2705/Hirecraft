@@ -4,6 +4,9 @@ import { updateSessionConsultation } from '../../services/supabaseService';
 import { fetchCareerIntelligence } from '../../services/careerIntelligenceService';
 import { trackEvent } from '../../utils/analytics';
 import InterviewContainer from '../interview/InterviewContainer';
+import JobTwinInputModal from '../jobtwin/JobTwinInputModal';
+import JobTwinReport from '../jobtwin/JobTwinReport';
+import { requestJobTwin } from '../../services/jobTwinService';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
@@ -13,6 +16,11 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
   const [intelligence, setIntelligence] = useState(null);
   const [loadingIntelligence, setLoadingIntelligence] = useState(true);
   const [showInterviewModal, setShowInterviewModal] = useState(false);
+
+  // Job Twin State
+  const [showJobTwinModal, setShowJobTwinModal] = useState(false);
+  const [jobTwin, setJobTwin] = useState(null);
+  const [isGeneratingJobTwin, setIsGeneratingJobTwin] = useState(false);
 
   const [consultationRequested, setConsultationRequested] = useState(false);
   const [preferredContact, setPreferredContact] = useState('Email');
@@ -98,6 +106,26 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
   const opportunityAlignment = intelligence?.opportunity_alignment || {};
   const questions = intelligence?.achievement_investigation_questions || [];
 
+  const handleJobTwinSubmit = async ({ jobTitle, company, jdText }) => {
+    setIsGeneratingJobTwin(true);
+    try {
+      const twinRes = await requestJobTwin({
+        diagnosticSessionId: sessionId,
+        jobTitle,
+        company,
+        jdText
+      });
+      if (twinRes) {
+        setJobTwin(twinRes);
+        setShowJobTwinModal(false);
+      }
+    } catch (err) {
+      console.warn('Job twin error:', err.message);
+    } finally {
+      setIsGeneratingJobTwin(false);
+    }
+  };
+
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto' }} className="printable-report-area">
       {/* Printable Style Tag */}
@@ -110,37 +138,63 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
         }
       `}</style>
 
-      {/* Header Banner */}
-      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <div className="badge no-print" style={{ marginBottom: '12px' }}>
-          Phase 4 Career Positioning Report
-        </div>
-        <h2 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '10px' }}>
-          Your Career Positioning Snapshot
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
-          Strategic assessment for <strong>{formData.name || 'Candidate'}</strong> — Target Role: <strong>{formData.target_role}</strong>
-        </p>
+      {/* If Job Twin view is active, render JobTwinReport overlay */}
+      {jobTwin ? (
+        <JobTwinReport 
+          jobTwin={jobTwin} 
+          candidateName={formData.name} 
+          onClose={() => setJobTwin(null)} 
+        />
+      ) : (
+        <>
+          {/* Header Banner */}
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <div className="badge no-print" style={{ marginBottom: '12px' }}>
+              Phase 4 Career Positioning Report
+            </div>
+            <h2 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '10px' }}>
+              Your Career Positioning Snapshot
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
+              Strategic assessment for <strong>{formData.name || 'Candidate'}</strong> — Target Role: <strong>{formData.target_role}</strong>
+            </p>
 
-        {/* Action Toolbar */}
-        <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '20px', flexWrap: 'wrap' }}>
-          <button 
-            onClick={() => setShowInterviewModal(true)} 
-            className="btn-primary" 
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #d97706, #f59e0b)', border: 'none', fontWeight: 700 }}
-          >
-            <Sparkles size={16} /> Launch AI Career Interview
-          </button>
+            {/* Action Toolbar */}
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '20px', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => setShowJobTwinModal(true)} 
+                className="btn-primary" 
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', fontWeight: 700 }}
+              >
+                <Target size={16} /> Analyze Opportunity (Job Twin)
+              </button>
 
-          <button onClick={handlePrintReport} className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-            <Printer size={16} /> Download / Print Strategy Report
-          </button>
-          
-          <button onClick={handleEmailReport} disabled={isSendingEmail || emailSent} className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-            <Mail size={16} /> {emailSent ? '✓ Report Emailed to ' + formData.email : isSendingEmail ? 'Sending Email...' : 'Email Me My Report'}
-          </button>
-        </div>
-      </div>
+              <button 
+                onClick={() => setShowInterviewModal(true)} 
+                className="btn-primary" 
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #d97706, #f59e0b)', border: 'none', fontWeight: 700 }}
+              >
+                <Sparkles size={16} /> Launch AI Career Interview
+              </button>
+
+              <button onClick={handlePrintReport} className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <Printer size={16} /> Download / Print Strategy Report
+              </button>
+              
+              <button onClick={handleEmailReport} disabled={isSendingEmail || emailSent} className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <Mail size={16} /> {emailSent ? '✓ Report Emailed to ' + formData.email : isSendingEmail ? 'Sending Email...' : 'Email Me My Report'}
+              </button>
+            </div>
+          </div>
+
+          {/* JOB TWIN INPUT MODAL */}
+          {showJobTwinModal && (
+            <JobTwinInputModal 
+              onSubmit={handleJobTwinSubmit} 
+              onClose={() => setShowJobTwinModal(false)} 
+              isSubmitting={isGeneratingJobTwin} 
+            />
+          )}
 
       {/* AI INTERVIEW ENGINE MODAL */}
       {showInterviewModal && (
@@ -434,6 +488,8 @@ export default function PositioningReport({ reportData, formData, sessionId, onR
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

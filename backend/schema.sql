@@ -241,6 +241,38 @@ CREATE POLICY "Admin select admin_roles" ON admin_roles FOR SELECT TO authentica
 CREATE POLICY "Admin select interview_sessions" ON interview_sessions FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
 
+-- 9. Create job_twins table (Phase 6 Opportunity Positioning Engine)
+CREATE TABLE IF NOT EXISTS job_twins (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  diagnostic_session_id uuid REFERENCES diagnostic_sessions(id) ON DELETE CASCADE,
+  job_opportunity_id uuid REFERENCES job_opportunities(id) ON DELETE SET NULL,
+  interview_session_id uuid REFERENCES interview_sessions(id) ON DELETE SET NULL,
+  
+  job_title text NOT NULL,
+  company text,
+  jd_text text NOT NULL,
+  
+  status text DEFAULT 'completed', -- 'processing', 'completed', 'failed', 'stale'
+  fingerprint text,
+  analysis_version text DEFAULT 'v1.0',
+  
+  evidence_matrix jsonb DEFAULT '{}'::jsonb,
+  positioning_strategy jsonb DEFAULT '{}'::jsonb,
+  narrative_strategy text,
+  
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_job_twins_diagnostic ON job_twins(diagnostic_session_id);
+
+ALTER TABLE job_twins ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public insert job_twins" ON job_twins FOR INSERT TO public WITH CHECK (true);
+CREATE POLICY "Public select job_twins" ON job_twins FOR SELECT TO public USING (true);
+CREATE POLICY "Public update job_twins" ON job_twins FOR UPDATE TO public USING (true);
+CREATE POLICY "Admin select job_twins" ON job_twins FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM admin_roles WHERE user_id = auth.uid()) OR auth.role() = 'service_role');
+
 -- Private Storage Bucket Initialization Note:
 -- Bucket name: 'hirecraft_docs'
 -- Setting: public = false (PRIVATE BUCKET)
